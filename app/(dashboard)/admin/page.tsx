@@ -4,7 +4,7 @@ import { useAdmin } from "@/hooks/useAdmin";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { UserData } from "@/types";
+import { UserData, Role } from "@/types";
 
 export default function AdminPage() {
     const { isAdmin } = useAdmin();
@@ -38,13 +38,27 @@ export default function AdminPage() {
         try {
             await updateDoc(doc(db, "users", uid), {
                 subscriptionStatus: status,
-                subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0 // 30 days or 0
+                subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0
             });
-            // Optimistic update
             setUsers(users.map(u => u.uid === uid ? { ...u, subscriptionStatus: status } : u));
         } catch (error) {
             console.error("Update failed", error);
             alert("Update failed");
+        }
+    };
+
+    const handlePromoteAdmin = async (uid: string, currentRole: Role) => {
+        const newRole = currentRole === 'admin' ? 'user' : 'admin';
+        const action = newRole === 'admin' ? 'Promote to Admin' : 'Remove Admin Access';
+
+        if (!confirm(`Are you sure you want to ${action} for this user?`)) return;
+
+        try {
+            await updateDoc(doc(db, "users", uid), { role: newRole });
+            setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
+        } catch (error) {
+            console.error("Role update failed", error);
+            alert("Failed to update role");
         }
     };
 
@@ -60,60 +74,86 @@ export default function AdminPage() {
     };
 
     if (isAdmin === null) return <div className="p-10 text-center">Checking Permissions...</div>;
-    if (isAdmin === false) return null; // Redirect handled in hook
+    if (isAdmin === false) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8">
-            <div className="max-w-6xl mx-auto">
-                <header className="mb-8 flex justify-between items-center">
-                    <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-                    <button onClick={fetchUsers} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Refresh</button>
+        <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
+            <div className="max-w-7xl mx-auto">
+                <header className="mb-8 flex justify-between items-center border-b border-gray-700 pb-6">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                            <span className="bg-red-600 text-xs px-2 py-1 rounded text-white uppercase tracking-wider">Super Admin</span>
+                            Dashboard
+                        </h1>
+                        <p className="text-gray-400 mt-1">Manage users, subscriptions, and admin roles.</p>
+                    </div>
+                    <button onClick={fetchUsers} className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition-colors">Refresh Data</button>
                 </header>
 
                 {loading ? (
-                    <div className="text-center py-10">Loading users...</div>
+                    <div className="text-center py-10 text-gray-400">Loading users...</div>
                 ) : (
-                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                    <div className="bg-gray-800 shadow-xl rounded-lg overflow-hidden border border-gray-700">
+                        <table className="min-w-full divide-y divide-gray-700">
+                            <thead className="bg-gray-900">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Subscription</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Controls</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-gray-800 divide-y divide-gray-700">
                                 {users.map((user) => (
-                                    <tr key={user.uid}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    <tr key={user.uid} className="hover:bg-gray-750 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm font-medium text-white">{user.email}</div>
+                                            <div className="text-xs text-gray-500">UID: {user.uid}</div>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-900 text-purple-200 border border-purple-700' : 'bg-gray-700 text-gray-300'
+                                                }`}>
+                                                {user.role}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.subscriptionStatus === 'active' ? 'bg-green-900 text-green-200 border border-green-700' : 'bg-red-900 text-red-200 border border-red-700'
                                                 }`}>
                                                 {user.subscriptionStatus}
                                             </span>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'N/A'}
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                            {user.subscriptionStatus !== 'active' && (
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-3">
+                                            {/* Role Management */}
+                                            <button
+                                                onClick={() => handlePromoteAdmin(user.uid, user.role)}
+                                                className={`text-xs px-2 py-1 rounded border ${user.role === 'admin' ? 'border-gray-600 text-gray-400 hover:bg-gray-700' : 'border-purple-600 text-purple-400 hover:bg-purple-900'}`}
+                                            >
+                                                {user.role === 'admin' ? 'Demote' : 'Make Admin'}
+                                            </button>
+
+                                            {/* Subscription Management */}
+                                            {user.subscriptionStatus !== 'active' ? (
                                                 <button
                                                     onClick={() => handleUpdateStatus(user.uid, 'active')}
-                                                    className="text-green-600 hover:text-green-900"
+                                                    className="text-green-400 hover:text-green-300"
                                                 >
                                                     Activate
                                                 </button>
-                                            )}
-                                            {user.subscriptionStatus === 'active' && (
+                                            ) : (
                                                 <button
                                                     onClick={() => handleUpdateStatus(user.uid, 'expired')}
-                                                    className="text-orange-600 hover:text-orange-900"
+                                                    className="text-orange-400 hover:text-orange-300"
                                                 >
                                                     Expire
                                                 </button>
                                             )}
+
                                             <button
                                                 onClick={() => handleDeleteUser(user.uid)}
-                                                className="text-red-600 hover:text-red-900 ml-4"
+                                                className="text-red-500 hover:text-red-400 ml-2"
                                             >
                                                 Delete
                                             </button>
