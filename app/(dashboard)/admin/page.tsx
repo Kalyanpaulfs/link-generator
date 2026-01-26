@@ -1,106 +1,129 @@
 "use client";
 
+import { useAdmin } from "@/hooks/useAdmin";
 import { useEffect, useState } from "react";
-import { useUserData } from "@/hooks/useUserData";
-import { useRouter } from "next/navigation";
-import { collection, getDocs, updateDoc, doc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { UserData } from "@/types";
-import { Button } from "@/components/ui/Button";
 
 export default function AdminPage() {
-    const { userData, loading } = useUserData();
-    const router = useRouter();
+    const { isAdmin } = useAdmin();
     const [users, setUsers] = useState<UserData[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false);
-
-    // Guard: Redirect if not admin
-    useEffect(() => {
-        if (!loading && (!userData || userData.role !== 'admin')) {
-            router.push("/dashboard");
-        }
-    }, [userData, loading, router]);
-
-    // Fetch all users
-    useEffect(() => {
-        if (userData?.role === 'admin') {
-            fetchUsers();
-        }
-    }, [userData]);
+    const [loading, setLoading] = useState(true);
 
     const fetchUsers = async () => {
-        setLoadingUsers(true);
         try {
-            const snap = await getDocs(collection(db, "users"));
-            const data = snap.docs.map(d => d.data() as UserData);
-            setUsers(data);
-        } catch (e) {
-            console.error(e);
-            alert("Failed to fetch users");
+            const querySnapshot = await getDocs(collection(db, "users"));
+            const fetchedUsers: UserData[] = [];
+            querySnapshot.forEach((doc) => {
+                fetchedUsers.push(doc.data() as UserData);
+            });
+            setUsers(fetchedUsers);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            alert("Failed to fetch users. Check console.");
         } finally {
-            setLoadingUsers(false);
+            setLoading(false);
         }
     };
 
-    const updateUserStatus = async (uid: string, status: 'active' | 'expired' | 'trial') => {
+    useEffect(() => {
+        if (isAdmin) {
+            fetchUsers();
+        }
+    }, [isAdmin]);
+
+    const handleUpdateStatus = async (uid: string, status: 'active' | 'expired') => {
+        if (!confirm(`Set user status to ${status}?`)) return;
         try {
             await updateDoc(doc(db, "users", uid), {
                 subscriptionStatus: status,
-                // If active, extend expiry by 30 days (mock logic for now)
-                subscriptionExpiry: status === 'active' ? Date.now() + 30 * 24 * 60 * 60 * 1000 : Date.now()
+                subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0 // 30 days or 0
             });
-            fetchUsers(); // Refresh
-        } catch (e) {
-            console.error(e);
-            alert("Failed to update user");
+            // Optimistic update
+            setUsers(users.map(u => u.uid === uid ? { ...u, subscriptionStatus: status } : u));
+        } catch (error) {
+            console.error("Update failed", error);
+            alert("Update failed");
         }
     };
 
-    if (loading || !userData || userData.role !== 'admin') {
-        return <div className="p-8 text-center text-gray-500">Checking permissions...</div>;
-    }
+    const handleDeleteUser = async (uid: string) => {
+        if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
+        try {
+            await deleteDoc(doc(db, "users", uid));
+            setUsers(users.filter(u => u.uid !== uid));
+        } catch (error) {
+            console.error("Delete failed", error);
+            alert("Delete failed");
+        }
+    };
+
+    if (isAdmin === null) return <div className="p-10 text-center">Checking Permissions...</div>;
+    if (isAdmin === false) return null; // Redirect handled in hook
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
-                <Button onClick={fetchUsers} variant="secondary">Refresh</Button>
-            </div>
+        <div className="min-h-screen bg-gray-50 p-8">
+            <div className="max-w-6xl mx-auto">
+                <header className="mb-8 flex justify-between items-center">
+                    <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+                    <button onClick={fetchUsers} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Refresh</button>
+                </header>
 
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {users.map((u) => (
-                            <tr key={u.uid}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{u.email}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{u.role}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                     ${u.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' :
-                                            u.subscriptionStatus === 'trial' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}`}>
-                                        {u.subscriptionStatus}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(u.subscriptionExpiry).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 space-x-2">
-                                    <button onClick={() => updateUserStatus(u.uid, 'active')} className="text-indigo-600 hover:text-indigo-900">Activate</button>
-                                    <button onClick={() => updateUserStatus(u.uid, 'expired')} className="text-red-600 hover:text-red-900">Expire</button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                {loading ? (
+                    <div className="text-center py-10">Loading users...</div>
+                ) : (
+                    <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {users.map((user) => (
+                                    <tr key={user.uid}>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                {user.subscriptionStatus}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            {user.subscriptionStatus !== 'active' && (
+                                                <button
+                                                    onClick={() => handleUpdateStatus(user.uid, 'active')}
+                                                    className="text-green-600 hover:text-green-900"
+                                                >
+                                                    Activate
+                                                </button>
+                                            )}
+                                            {user.subscriptionStatus === 'active' && (
+                                                <button
+                                                    onClick={() => handleUpdateStatus(user.uid, 'expired')}
+                                                    className="text-orange-600 hover:text-orange-900"
+                                                >
+                                                    Expire
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDeleteUser(user.uid)}
+                                                className="text-red-600 hover:text-red-900 ml-4"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
     );

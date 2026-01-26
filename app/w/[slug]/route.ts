@@ -1,6 +1,6 @@
 import { getAdminDb } from "@/lib/firebase-admin";
 import { type NextRequest, NextResponse } from "next/server";
-import { FieldValue } from "firebase-admin/firestore";
+import * as admin from "firebase-admin";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +71,7 @@ export async function GET(
         // We don't await this to speed up redirect? Vercel Functions might kill it. 
         // Safer to await.
         await linkDoc.ref.update({
-            clicks: FieldValue.increment(1)
+            clicks: admin.firestore.FieldValue.increment(1)
         });
 
         const number = link.whatsappNumber.replace(/[^\d]/g, '');
