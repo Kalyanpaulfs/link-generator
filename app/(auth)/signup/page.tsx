@@ -6,7 +6,10 @@ import { doc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { UserData } from "@/types";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Card, CardContent } from "@/components/ui/Card";
+import { nanoid } from "nanoid";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
@@ -21,86 +24,85 @@ export default function SignupPage() {
         setError("");
 
         try {
-            // 1. Create Auth User
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // 2. Create Firestore User Document (Trial Plan)
-            const trialDuration = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-            const now = Date.now();
-
-            const userData: UserData = {
+            // Create user document with trial status
+            await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
-                email: user.email!,
+                email: user.email,
                 role: "user",
                 subscriptionStatus: "trial",
-                subscriptionExpiry: now + trialDuration,
-                createdAt: now,
-            };
+                subscriptionExpiry: Date.now() + 14 * 24 * 60 * 60 * 1000, // 14 days
+                createdAt: Date.now(),
+            });
 
-            await setDoc(doc(db, "users", user.uid), userData);
-
-            // 3. Redirect to Dashboard
             router.push("/dashboard");
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Failed to create account");
+            setError(err.message || "Failed to create account.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="space-y-6">
-            <div className="text-center">
-                <h2 className="text-3xl font-extrabold text-gray-900">Start your free trial</h2>
-                <p className="mt-2 text-sm text-gray-600">
-                    Create WhatsApp redirect links in seconds.
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md">
+                <div className="flex justify-center mb-6">
+                    <div className="h-10 w-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-lg">L</div>
+                </div>
+                <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+                    Create your account
+                </h2>
+                <p className="mt-2 text-center text-sm text-gray-600">
+                    Already have an account?{" "}
+                    <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+                        Sign in
+                    </Link>
                 </p>
             </div>
 
-            <form className="mt-8 space-y-6" onSubmit={handleSignup}>
-                <div className="rounded-md shadow-sm -space-y-px">
-                    <div>
-                        <input
-                            type="email"
-                            required
-                            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                            placeholder="Email address"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <input
-                            type="password"
-                            required
-                            minLength={6}
-                            className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                            placeholder="Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-                </div>
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <Card className="shadow-lg border-gray-100">
+                    <CardContent className="pt-8 pb-8 px-8">
+                        <form className="space-y-6" onSubmit={handleSignup}>
+                            <Input
+                                label="Email address"
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                            />
 
-                {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                            <Input
+                                label="Password"
+                                type="password"
+                                required
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                            />
 
-                <div>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                    >
-                        {loading ? "Creating account..." : "Sign up"}
-                    </button>
-                </div>
-            </form>
+                            {error && (
+                                <div className="rounded-md bg-red-50 p-3 border border-red-100">
+                                    <div className="flex">
+                                        <div className="ml-3">
+                                            <p className="text-sm font-medium text-red-800">{error}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
-            <div className="text-center text-sm">
-                <Link href="/login" className="text-indigo-600 hover:text-indigo-500">
-                    Already have an account? Log in
-                </Link>
+                            <div>
+                                <Button type="submit" className="w-full h-11 text-base shadow-sm font-semibold" isLoading={loading}>
+                                    Create Account
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

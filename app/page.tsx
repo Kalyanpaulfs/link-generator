@@ -1,52 +1,101 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 
-export default function LandingPage() {
+export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-100 via-white to-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       {/* Navbar */}
-      <nav className="p-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600">
-            LinkGen
+      <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold">L</div>
+            <span className="text-xl font-bold tracking-tight text-gray-900">LinkGen</span>
           </div>
-          <div className="space-x-4">
-            <Link href="/login" className="text-gray-600 hover:text-gray-900 font-medium">Log in</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Log in</Link>
             <Link href="/signup">
-              <Button>Get Started</Button>
+              <Button size="sm">Get Started</Button>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <main className="flex-grow flex items-center justify-center px-4">
-        <div className="text-center max-w-3xl mx-auto space-y-8 animate-in fade-in zoom-in duration-500">
-          <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-gray-900">
-            Smart Redirects for <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-green-500 to-emerald-600">WhatsApp</span>
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Create permanent <strong>/w/slug</strong> links for your business.
-            Change your WhatsApp number anytime without changing the link.
-            Perfect for ads, profiles, and printed materials.
-          </p>
-          <div className="flex justify-center gap-4 pt-4">
-            <Link href="/signup">
-              <Button size="lg" className="rounded-full px-8 py-4 text-lg shadow-xl shadow-indigo-500/30 hover:scale-105 transition-transform">
-                Start Free Trial
-              </Button>
-            </Link>
+      <main className="flex-grow">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden pt-16 pb-24 lg:pt-32 lg:pb-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+            <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-600 shadow-sm mb-8 animate-fade-in-up">
+              <span className="flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+              v1.0 is now live
+            </div>
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-6 max-w-4xl mx-auto leading-[1.1]">
+              Generate WhatsApp Links <br className="hidden md:block" />
+              <span className="text-gray-400">That Convert.</span>
+            </h1>
+            <p className="mt-6 text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+              Create smart, trackable WhatsApp links for your business.
+              Analyze clicks, manage redirects, and grow your audience with a premium tool designed for professionals.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link href="/signup">
+                <Button size="lg" className="h-12 px-8 text-base shadow-lg shadow-gray-200">Start Free Trial</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="secondary" size="lg" className="h-12 px-8 text-base">View Demo</Button>
+              </Link>
+            </div>
+            <p className="mt-4 text-sm text-gray-400">No credit card required. Cancel anytime.</p>
           </div>
-          <p className="text-xs text-gray-400 pt-8">
-            Disclaimer: This service is not affiliated with WhatsApp Inc.
-          </p>
+
+          {/* Subtle Background Decoration */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -z-10 w-[1000px] h-[500px] opacity-30 bg-gradient-to-tr from-indigo-100 to-transparent rounded-full blur-3xl pointer-events-none"></div>
         </div>
+
+        {/* Feature Grid */}
+        <section className="bg-white py-24 border-t border-gray-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              <div className="space-y-4">
+                <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                  ⚡
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Instant Redirects</h3>
+                <p className="text-gray-500 leading-relaxed">
+                  Fast, server-side redirection ensuring you never lose a potential customer due to load times.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                  📊
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Click Analytics</h3>
+                <p className="text-gray-500 leading-relaxed">
+                  Track every click. Know exactly how your links are performing with our built-in dashboard.
+                </p>
+              </div>
+              <div className="space-y-4">
+                <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                  🛡️
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Enterprise Security</h3>
+                <p className="text-gray-500 leading-relaxed">
+                  Bank-grade security with role-based access control and secure API routes.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
-      {/* Footer */}
-      <footer className="py-8 text-center text-gray-500 text-sm">
-        &copy; {new Date().getFullYear()} LinkGen. All rights reserved.
+      <footer className="bg-gray-50 border-t border-gray-200 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center text-sm text-gray-500">
+          <p>© 2024 LinkGen Inc. All rights reserved.</p>
+          <div className="flex gap-6">
+            <a href="#" className="hover:text-gray-900">Privacy</a>
+            <a href="#" className="hover:text-gray-900">Terms</a>
+            <a href="#" className="hover:text-gray-900">Contact</a>
+          </div>
+        </div>
       </footer>
     </div>
   );
