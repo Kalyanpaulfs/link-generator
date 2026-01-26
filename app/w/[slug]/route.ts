@@ -1,6 +1,8 @@
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { type NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
+
+export const dynamic = 'force-dynamic';
 
 interface LinkData {
     userId: string;
@@ -27,6 +29,12 @@ export async function GET(
 
     try {
         // 1. Lookup Link
+        const adminDb = getAdminDb();
+        if (!adminDb) {
+            console.error("Firebase Admin credentials missing");
+            return new NextResponse("Server Configuration Error: Missing Credentials", { status: 500 });
+        }
+
         const linksRef = adminDb.collection("links");
         const snapshot = await linksRef.where("slug", "==", slug).limit(1).get();
 
@@ -42,6 +50,7 @@ export async function GET(
             return new NextResponse("Link Disabled", { status: 403 });
         }
 
+        // 3. User Subscription Check
         // 3. User Subscription Check
         const userSnapshot = await adminDb.collection("users").doc(link.userId).get();
 

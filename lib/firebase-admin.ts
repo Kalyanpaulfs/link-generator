@@ -33,4 +33,11 @@ export function createFirebaseAdminApp() {
     });
 }
 
-export const adminDb = createFirebaseAdminApp().firestore();
+// Lazy initialization to avoid build-time errors if env vars are missing
+export function getAdminDb() {
+    try {
+        return createFirebaseAdminApp().firestore();
+    } catch {
+        return null;
+    }
+}
