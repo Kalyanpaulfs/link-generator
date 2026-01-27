@@ -8,7 +8,17 @@ interface FirebaseAdminConfig {
 }
 
 function formatPrivateKey(key: string) {
-    return key.replace(/\\n/g, "\n");
+    // 1. Handle literal newlines first (common in .env files)
+    let formatted = key.replace(/\\n/g, "\n");
+
+    // 2. Extract the PEM block using regex to ignore surrounding quotes/garbage
+    const match = formatted.match(/-----BEGIN PRIVATE KEY-----[\s\S]*?-----END PRIVATE KEY-----/);
+
+    if (match) {
+        return match[0];
+    }
+
+    return formatted;
 }
 
 export function createFirebaseAdminApp() {
@@ -21,6 +31,8 @@ export function createFirebaseAdminApp() {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
+        // In build time or if envs are missing, this might throw or return null.
+        // For server actions we expect these to be present.
         throw new Error("Missing Firebase Admin credentials in environment variables.");
     }
 
@@ -33,11 +45,6 @@ export function createFirebaseAdminApp() {
     });
 }
 
-// Lazy initialization to avoid build-time errors if env vars are missing
-export function getAdminDb() {
-    try {
-        return createFirebaseAdminApp().firestore();
-    } catch {
-        return null;
-    }
-}
+const app = createFirebaseAdminApp();
+export const adminDb = app.firestore();
+export const adminAuth = app.auth();

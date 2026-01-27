@@ -21,22 +21,49 @@ service cloud.firestore {
 
     function isValidLink() {
       let data = request.resource.data;
-      return 
+      return (
         data.slug is string &&
         data.whatsappNumber is string &&
         data.userId == request.auth.uid && 
         data.slug.size() >= 4 && 
         data.slug.size() <= 30 &&
-        data.active is bool;
+        data.active is bool
+      );
     }
 
     // --- Collection Rules ---
+
+    function isSubscribed() {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return user.role == 'admin' || 
+             ((user.subscriptionStatus == 'active' || user.subscriptionStatus == 'trial') && 
+              (user.subscriptionExpiry > request.time.toMillis()));
+    }
 
     match /users/{uid} {
       // Owner can read, Admin can read/write (to manage subscriptions)
       allow read: if isOwner(uid) || isAdmin();
       allow write: if isAdmin(); 
       // Note: First admin must be set via Firebase Console or hardcoded rule if needed.
+    }
+
+    match /subscriptions/{subId} {
+        allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        // Admin creates/updates subscriptions
+        allow write: if isAdmin();
+    }
+
+    match /payments/{payId} {
+        allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        // User creates payments
+        allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+        // Admin updates status
+        allow update: if isAdmin();
+    }
+
+    match /settings/{docId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdmin();
     }
 
     match /links/{linkId} {
@@ -49,11 +76,13 @@ service cloud.firestore {
       // Standard user logic
       allow create: if isAuthenticated() && 
                     request.resource.data.userId == request.auth.uid &&
+                    isSubscribed() &&
                     isValidLink();
 
       allow update: if isAuthenticated() && 
                     resource.data.userId == request.auth.uid &&
                     request.resource.data.userId == request.auth.uid &&
+                    isSubscribed() &&
                     isValidLink();
 
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;

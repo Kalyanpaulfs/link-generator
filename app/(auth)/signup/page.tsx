@@ -8,14 +8,16 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Card, CardContent } from "@/components/ui/Card";
-import { nanoid } from "nanoid";
+import { ArrowLeft } from "lucide-react";
 
 export default function SignupPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // TEMPORARY CLEANUP REMOVED
+
     const router = useRouter();
 
     const handleSignup = async (e: React.FormEvent) => {
@@ -27,13 +29,13 @@ export default function SignupPage() {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // Create user document with trial status
+            // Create user document with 'none' status to force plan selection
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 email: user.email,
                 role: "user",
-                subscriptionStatus: "trial",
-                subscriptionExpiry: Date.now() + 14 * 24 * 60 * 60 * 1000, // 14 days
+                subscriptionStatus: "none",
+                subscriptionExpiry: 0,
                 createdAt: Date.now(),
             });
 
@@ -47,25 +49,37 @@ export default function SignupPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative">
+            {/* Back Button */}
+            <div className="absolute top-8 left-8">
+                <Link href="/">
+                    <Button variant="ghost" className="gap-2 text-gray-600 hover:text-gray-900">
+                        <ArrowLeft className="w-4 h-4" /> Back to Home
+                    </Button>
+                </Link>
+            </div>
+
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="flex justify-center mb-6">
                     <div className="h-10 w-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-bold text-lg">L</div>
                 </div>
                 <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
-                    Create your account
+                    Start your 14-day free trial
                 </h2>
                 <p className="mt-2 text-center text-sm text-gray-600">
-                    Already have an account?{" "}
-                    <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-                        Sign in
-                    </Link>
+                    No credit card required. Cancel anytime.
                 </p>
-            </div>
+                <div className="mt-6 text-center">
+                    <p className="text-gray-600">
+                        Already have an account?{" "}
+                        <Link href="/login" className="text-gray-900 font-medium hover:underline">
+                            Log in
+                        </Link>
+                    </p>
+                </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-                <Card className="shadow-lg border-gray-100">
-                    <CardContent className="pt-8 pb-8 px-8">
+                <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                    <div className="bg-white py-8 px-4 shadow-xl shadow-gray-200/50 sm:rounded-xl sm:px-10 border border-gray-100">
                         <form className="space-y-6" onSubmit={handleSignup}>
                             <Input
                                 label="Email address"
@@ -101,8 +115,8 @@ export default function SignupPage() {
                                 </Button>
                             </div>
                         </form>
-                    </CardContent>
-                </Card>
+                    </div>
+                </div>
             </div>
         </div>
     );

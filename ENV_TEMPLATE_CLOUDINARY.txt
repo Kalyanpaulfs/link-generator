@@ -1,0 +1,10 @@
+
+# ------------------------------------------------------------------
+# Cloudinary Credentials (Required for Image Uploads)
+# Go to Cloudinary Dashboard -> Settings -> Access Keys
+# Create an "Upload Preset" in Settings -> Upload (Mode: Unsigned)
+# ------------------------------------------------------------------
+
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=your-unsigned-upload-preset
+NEXT_PUBLIC_CLOUDINARY_API_KEY=your-api-key

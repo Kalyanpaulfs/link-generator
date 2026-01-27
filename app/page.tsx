@@ -1,5 +1,7 @@
+
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { Zap, BarChart3, ShieldCheck } from "lucide-react";
 
 export default function Home() {
   return (
@@ -25,7 +27,7 @@ export default function Home() {
         <div className="relative overflow-hidden pt-16 pb-24 lg:pt-32 lg:pb-40">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
             <div className="inline-flex items-center rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-600 shadow-sm mb-8 animate-fade-in-up">
-              <span className="flex h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+              <span className="flex h-2 w-2 rounded-full bg-green-50 mr-2"></span>
               v1.0 is now live
             </div>
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-6 max-w-4xl mx-auto leading-[1.1]">
@@ -57,7 +59,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
               <div className="space-y-4">
                 <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                  ⚡
+                  <Zap className="w-5 h-5 text-gray-900" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">Instant Redirects</h3>
                 <p className="text-gray-500 leading-relaxed">
@@ -66,7 +68,7 @@ export default function Home() {
               </div>
               <div className="space-y-4">
                 <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                  📊
+                  <BarChart3 className="w-5 h-5 text-gray-900" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">Click Analytics</h3>
                 <p className="text-gray-500 leading-relaxed">
@@ -75,7 +77,7 @@ export default function Home() {
               </div>
               <div className="space-y-4">
                 <div className="h-10 w-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
-                  🛡️
+                  <ShieldCheck className="w-5 h-5 text-gray-900" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900">Enterprise Security</h3>
                 <p className="text-gray-500 leading-relaxed">

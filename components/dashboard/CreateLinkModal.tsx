@@ -24,32 +24,42 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) return;
+        console.log("CreateLinkModal: handleSubmit triggered");
+        if (!user) {
+            console.error("CreateLinkModal: No user found");
+            return;
+        }
 
         setLoading(true);
         setError('');
 
         try {
+            console.log("CreateLinkModal: Validating input", whatsapp);
             // Basic validation
             if (!whatsapp.trim()) throw new Error("WhatsApp number is required");
 
             const slug = nanoid(7);
             const now = Date.now();
+            const cleanNumber = whatsapp.replace(/[^\d+]/g, '');
+
+            console.log("CreateLinkModal: Attempting addDoc", { slug, userId: user.uid, whatsapp: cleanNumber });
 
             await addDoc(collection(db, "links"), {
                 slug,
                 userId: user.uid,
-                whatsappNumber: whatsapp.replace(/[^\d+]/g, ''), // Clean up number
+                whatsappNumber: cleanNumber,
                 active: true,
                 clicks: 0,
                 createdAt: now
             });
 
+            console.log("CreateLinkModal: Success");
+
             setWhatsapp('');
             onSuccess();
             onClose();
         } catch (err: any) {
-            console.error(err);
+            console.error("CreateLinkModal: Error", err);
             setError(err.message || "Failed to create link");
         } finally {
             setLoading(false);

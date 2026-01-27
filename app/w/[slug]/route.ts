@@ -1,4 +1,4 @@
-import { getAdminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { type NextRequest, NextResponse } from "next/server";
 import * as admin from "firebase-admin";
 
@@ -13,8 +13,9 @@ interface LinkData {
 
 interface UserData {
     uid: string;
-    subscriptionStatus: 'trial' | 'active' | 'expired';
+    subscriptionStatus: 'trial' | 'active' | 'expired' | 'pending' | 'none';
     subscriptionExpiry: number;
+    role: 'user' | 'admin';
 }
 
 export async function GET(
@@ -29,12 +30,6 @@ export async function GET(
 
     try {
         // 1. Lookup Link
-        const adminDb = getAdminDb();
-        if (!adminDb) {
-            console.error("Firebase Admin credentials missing");
-            return new NextResponse("Server Configuration Error: Missing Credentials", { status: 500 });
-        }
-
         const linksRef = adminDb.collection("links");
         const snapshot = await linksRef.where("slug", "==", slug).limit(1).get();
 
@@ -51,7 +46,6 @@ export async function GET(
         }
 
         // 3. User Subscription Check
-        // 3. User Subscription Check
         const userSnapshot = await adminDb.collection("users").doc(link.userId).get();
 
         if (!userSnapshot.exists) {
@@ -60,11 +54,17 @@ export async function GET(
 
         const user = userSnapshot.data() as UserData;
         const now = Date.now();
-        const isExpired = user.subscriptionStatus === 'expired' ||
-            (user.subscriptionExpiry && user.subscriptionExpiry < now);
 
-        if (isExpired) {
-            return new NextResponse("Subscription Expired", { status: 402 });
+        // Admin always active
+        if (user.role === 'admin') {
+            // pass
+        } else {
+            const isActive = (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trial');
+            const isExpired = user.subscriptionExpiry && user.subscriptionExpiry < now;
+
+            if (!isActive || isExpired) {
+                return new NextResponse("Subscription Required or Expired", { status: 402 });
+            }
         }
 
         // 4. Success - Update Stats
