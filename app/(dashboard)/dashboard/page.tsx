@@ -15,7 +15,7 @@ import { BarChart3, Link as LinkIcon, Star } from "lucide-react";
 
 export default function DashboardPage() {
     const { user, loading } = useRequireAuth();
-    const { subscriptionStatus, loading: roleLoading } = useRole(); // Use central hook
+    const { subscriptionStatus, loading: roleLoading, isAdmin } = useRole(); // Use central hook
     const [links, setLinks] = useState<LinkData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -80,8 +80,8 @@ export default function DashboardPage() {
     // Add trial status check
     const isTrial = subscriptionStatus === 'trial';
 
-    // Logic: Active users can always create. Trial users can create only if they have < 1 link.
-    const canCreateLink = !isPending && (isActive || (isTrial && links.length < 1));
+    // Logic: Active users can always create. Trial users can create only if they have < 1 link. Admins can always create.
+    const canCreateLink = isAdmin || (!isPending && (isActive || (isTrial && links.length < 1)));
 
     if (loading || roleLoading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
 
@@ -125,7 +125,7 @@ export default function DashboardPage() {
             )}
 
             {/* No Active Plan Banner */}
-            {!isPending && !isActive && !isTrial && (
+            {!isPending && !isActive && !isTrial && !isAdmin && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md">
                     <div className="flex">
                         <div className="ml-3">
@@ -138,8 +138,8 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Trial Limit Banner (Only show if they are on trial and hit the limit) */}
-            {isTrial && links.length >= 1 && (
+            {/* Trial Limit Banner (Only show if they are on trial and hit the limit, AND NOT ADMIN) */}
+            {isTrial && links.length >= 1 && !isAdmin && (
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
                     <div className="flex">
                         <div className="ml-3">

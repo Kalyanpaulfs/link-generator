@@ -16,7 +16,7 @@ interface CreateLinkModalProps {
 
 export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalProps) {
     const { user } = useAuth();
-    const [whatsapp, setWhatsapp] = useState('');
+    const [whatsapp, setWhatsapp] = useState('+91'); // Default to +91
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -35,12 +35,43 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
         try {
             console.log("CreateLinkModal: Validating input", whatsapp);
-            // Basic validation
+
             if (!whatsapp.trim()) throw new Error("WhatsApp number is required");
+
+            // Clean input: ensure it starts with +, remove spaces/dashes for validation
+            let cleanNumber = whatsapp.trim().replace(/[\s-]/g, '');
+
+            if (!cleanNumber.startsWith('+')) {
+                // Auto-add + if missing but user typed country code? 
+                // Or force user to type it. The user said "editable" prefix.
+                // Let's assume user might delete everything.
+                if (/^\d/.test(cleanNumber)) {
+                    cleanNumber = '+' + cleanNumber;
+                } else {
+                    throw new Error("Number must include country code (e.g. +91)");
+                }
+            }
+
+            // Extract digits only
+            const digitsOnly = cleanNumber.replace(/\D/g, '');
+
+            // Validation logic
+            // User requested: "10 digits mandatory" (implied for subscriber number)
+            // Specific check for +91 (India) which is the default/requested example
+            if (cleanNumber.startsWith('+91')) {
+                if (digitsOnly.length !== 12) { // 91 + 10 digits = 12
+                    const currentDigits = digitsOnly.length > 2 ? digitsOnly.length - 2 : 0;
+                    throw new Error(`For +91, number must be exactly 10 digits. You entered ${currentDigits}.`);
+                }
+            } else {
+                // Generic safety check: Phone numbers are generally 7-15 digits
+                if (digitsOnly.length < 8 || digitsOnly.length > 15) {
+                    throw new Error("Invalid phone number length.");
+                }
+            }
 
             const slug = nanoid(7);
             const now = Date.now();
-            const cleanNumber = whatsapp.replace(/[^\d+]/g, '');
 
             console.log("CreateLinkModal: Attempting addDoc", { slug, userId: user.uid, whatsapp: cleanNumber });
 
@@ -55,7 +86,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
             console.log("CreateLinkModal: Success");
 
-            setWhatsapp('');
+            setWhatsapp('+91'); // Reset to default
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -80,9 +111,23 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <Input
                             label="WhatsApp Number"
-                            placeholder="e.g. 15551234567"
+                            placeholder="Example: +91 9876543210"
                             value={whatsapp}
-                            onChange={(e) => setWhatsapp(e.target.value)}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                // Strictly allow only digits, +, space, and dashes. No alphabets.
+                                if (/^[0-9+\s-]*$/.test(val)) {
+                                    // Limit length logic
+                                    // If starts with +91, max 12 digits total (+91 9876543210)
+                                    const digits = val.replace(/\D/g, '');
+                                    if (val.startsWith('+91') && digits.length > 12) return;
+
+                                    // General max safety limit
+                                    if (digits.length > 15) return;
+
+                                    setWhatsapp(val);
+                                }
+                            }}
                             type="tel"
                             required
                             autoFocus
