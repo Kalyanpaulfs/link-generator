@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useAuth";
+import { useRole } from "@/hooks/useRole"; // Import new hook
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { LinkData } from "@/types";
@@ -14,12 +15,9 @@ import { BarChart3, Link as LinkIcon, Star } from "lucide-react";
 
 export default function DashboardPage() {
     const { user, loading } = useRequireAuth();
+    const { subscriptionStatus, loading: roleLoading } = useRole(); // Use central hook
     const [links, setLinks] = useState<LinkData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
-
-    // Subscription Check
-    const [subStatus, setSubStatus] = useState<'none' | 'pending' | 'active' | 'expired'>('none');
-    const [subLoading, setSubLoading] = useState(true);
 
     useEffect(() => {
         if (!user) return;
@@ -40,28 +38,8 @@ export default function DashboardPage() {
             setLinks(fetchedLinks);
         });
 
-        // Fetch Subscriptions (existing logic)
-        const qSubs = query(
-            collection(db, "subscriptions"),
-            where("userId", "==", user.uid)
-        );
-
-        const unsubscribeSubs = onSnapshot(qSubs, (snapshot) => {
-            if (snapshot.empty) {
-                setSubStatus('none');
-            } else {
-                const subs = snapshot.docs.map(d => d.data());
-                subs.sort((a, b) => b.createdAt - a.createdAt);
-
-                const latest = subs[0];
-                setSubStatus(latest.status as any);
-            }
-            setSubLoading(false);
-        });
-
         return () => {
             unsubscribeLinks();
-            unsubscribeSubs();
         };
     }, [user]);
 
@@ -97,10 +75,15 @@ export default function DashboardPage() {
         }
     };
 
-    const isPending = subStatus === 'pending';
-    const isActive = subStatus === 'active';
+    const isPending = subscriptionStatus === 'pending';
+    const isActive = subscriptionStatus === 'active';
+    // Add trial status check
+    const isTrial = subscriptionStatus === 'trial';
 
-    if (loading || subLoading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
+    // Logic: Active users can always create. Trial users can create only if they have < 1 link.
+    const canCreateLink = !isPending && (isActive || (isTrial && links.length < 1));
+
+    if (loading || roleLoading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
 
     const totalClicks = links.reduce((sum, link) => sum + (link.clicks || 0), 0);
     const activeLinks = links.filter(l => l.active).length;
@@ -116,7 +99,7 @@ export default function DashboardPage() {
                 <Button
                     onClick={() => setIsModalOpen(true)}
                     className="shadow-lg shadow-indigo-500/20"
-                    disabled={isPending || !isActive} // Only active users can create
+                    disabled={!canCreateLink}
                 >
                     + Create New Link
                 </Button>
@@ -142,13 +125,27 @@ export default function DashboardPage() {
             )}
 
             {/* No Active Plan Banner */}
-            {!isPending && !isActive && (
+            {!isPending && !isActive && !isTrial && (
                 <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md">
                     <div className="flex">
                         <div className="ml-3">
                             <p className="text-sm text-red-700">
                                 <strong className="font-medium">No Active Plan.</strong> Please select a plan to start creating links.
                                 <a href="/plans" className="ml-2 font-bold underline hover:text-red-800">View Plans</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Trial Limit Banner (Only show if they are on trial and hit the limit) */}
+            {isTrial && links.length >= 1 && (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
+                    <div className="flex">
+                        <div className="ml-3">
+                            <p className="text-sm text-blue-700">
+                                <strong className="font-medium">Trial Limit Reached.</strong> You can create 1 link on the free trial. Upgrade to create more.
+                                <a href="/plans" className="ml-2 font-bold underline hover:text-blue-800">Upgrade Plan</a>
                             </p>
                         </div>
                     </div>
@@ -206,7 +203,7 @@ export default function DashboardPage() {
                         <div className="mt-6">
                             <Button
                                 onClick={() => setIsModalOpen(true)}
-                                disabled={isPending || !isActive}
+                                disabled={!canCreateLink}
                             >
                                 Create Link
                             </Button>

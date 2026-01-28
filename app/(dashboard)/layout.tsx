@@ -17,7 +17,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const { user } = useAuth(); // We might not need this if useRole gives us userData
-    const { isAdmin, isSubscribed, loading: roleLoading, subscriptionStatus } = useRole();
+    const { userData, isAdmin, isSubscribed, loading: roleLoading, subscriptionStatus } = useRole();
     const router = useRouter();
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,28 +27,34 @@ export default function DashboardLayout({
             const isPlansPage = pathname.startsWith('/plans') || pathname.startsWith('/payment');
             // If user is NOT subscribed and NOT on plans/payment page, redirect to plans
             // ALLOW if status is 'pending' so they can see the "Under Review" screen
-            if (!isSubscribed && subscriptionStatus !== 'pending' && !isPlansPage) {
+            // FIX: Only redirect if userData exists (user is actually logged in)
+            if (userData && !isSubscribed && subscriptionStatus !== 'pending' && !isPlansPage) {
                 router.push('/plans');
             }
         }
-    }, [isSubscribed, roleLoading, pathname, router]);
+    }, [isSubscribed, roleLoading, pathname, router, userData, subscriptionStatus]);
 
     const handleLogout = async () => {
-        await signOut(auth);
+        // Navigate first to avoid dashboard protection redirecting to login
         router.push("/");
+
+        // Short delay to allow navigation to start/complete before killing session
+        setTimeout(async () => {
+            await signOut(auth);
+        }, 500);
     };
 
     const isActive = (path: string) => pathname === path;
 
     // Prevent flash of dashboard content
     const isPlansPage = pathname.startsWith('/plans') || pathname.startsWith('/payment');
-    const shouldBlock = !roleLoading && !isSubscribed && subscriptionStatus !== 'pending' && !isPlansPage;
+    const shouldBlock = !roleLoading && userData && !isSubscribed && subscriptionStatus !== 'pending' && !isPlansPage;
 
     // While loading role or if blocking access, show nothing or loader?
     if (roleLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-400">Loading...</div>;
 
     // Check pending first
-    if (subscriptionStatus === 'pending' && !isAdmin) {
+    if (userData && subscriptionStatus === 'pending' && !isAdmin) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 font-sans">
                 <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 max-w-md w-full text-center">
@@ -110,16 +116,18 @@ export default function DashboardLayout({
                                 </div>
                             )}
                             <div className="h-4 w-px bg-gray-200 mx-2 hidden sm:block"></div>
-                            <div className="hidden sm:block">
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={handleLogout}
-                                    className="text-gray-500 hover:text-red-600"
-                                >
-                                    Sign out
-                                </Button>
-                            </div>
+                            {user && (
+                                <div className="hidden sm:block">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleLogout}
+                                        className="text-gray-500 hover:text-red-600"
+                                    >
+                                        Sign out
+                                    </Button>
+                                </div>
+                            )}
                             {/* Mobile menu button */}
                             <div className="flex items-center sm:hidden">
                                 <button
@@ -161,15 +169,17 @@ export default function DashboardLayout({
                         </div>
                         <div className="pt-4 pb-4 border-t border-gray-200">
                             {/* ... mobile profile ... */}
-                            <div className="px-2">
-                                <Button
-                                    variant="ghost"
-                                    onClick={handleLogout}
-                                    className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                                >
-                                    Sign out
-                                </Button>
-                            </div>
+                            {user && (
+                                <div className="px-2">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleLogout}
+                                        className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                                    >
+                                        Sign out
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
