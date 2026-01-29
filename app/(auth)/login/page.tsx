@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { sendOtp, verifyOtp } from "@/app/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
@@ -10,80 +11,133 @@ import { Input } from "@/components/ui/Input";
 import { ArrowLeft } from "lucide-react";
 
 function LoginForm() {
+    const [step, setStep] = useState<'email' | 'otp'>('email');
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
+    const [otp, setOtp] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirect = searchParams.get("redirect") || "/dashboard";
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError("");
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
-
-            // Check if user exists in Firestore (synced with Admin deletions)
-            const { doc, getDoc } = await import("firebase/firestore");
-            const { db } = await import("@/lib/firebase");
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-
-            if (!userDoc.exists()) {
-                // User deleted by admin but still in Auth
-                const { signOut } = await import("firebase/auth");
-                await signOut(auth);
-                throw new Error("User account not found. Please sign up again.");
+            const res = await sendOtp(email, 'login');
+            if (res.success) {
+                setStep('otp');
+            } else {
+                setError(res.error || "Failed to send code.");
             }
+        } catch (err: any) {
+            setError("Something went wrong. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
-            router.push(redirect);
+    const handleVerifyOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError("");
+
+        try {
+            const res = await verifyOtp(email, otp, 'login');
+            if (res.success && res.token) {
+                await signInWithCustomToken(auth, res.token);
+                router.push(redirect);
+            } else {
+                setError(res.error || "Invalid code.");
+            }
         } catch (err: any) {
             console.error(err);
-            setError(err.message || "Invalid email or password.");
+            setError("Verification failed. Please try again.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <form className="space-y-6" onSubmit={handleLogin}>
-            <Input
-                label="Email address"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-            />
+        <div className="space-y-6">
+            <h3 className="text-center text-lg font-medium text-gray-900 border-b pb-4 mb-4">
+                {step === 'email' ? "Sign In" : "Verify It's You"}
+            </h3>
 
-            <Input
-                label="Password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-            />
+            {step === 'email' ? (
+                <form className="space-y-6" onSubmit={handleSendOtp}>
+                    <Input
+                        label="Email address"
+                        type="email"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@example.com"
+                    />
 
-            {error && (
-                <div className="rounded-md bg-red-50 p-3 border border-red-100">
-                    <div className="flex">
-                        <div className="ml-3">
+                    {error && (
+                        <div className="rounded-md bg-red-50 p-3 border border-red-100">
                             <p className="text-sm font-medium text-red-800">{error}</p>
                         </div>
-                    </div>
-                </div>
-            )}
+                    )}
 
-            <div>
-                <Button type="submit" className="w-full h-11 text-base shadow-sm font-semibold" isLoading={loading}>
-                    Sign in
-                </Button>
-            </div>
-        </form>
+                    <div>
+                        <Button type="submit" className="w-full h-11 text-base shadow-sm font-semibold" isLoading={loading}>
+                            Send Login Code
+                        </Button>
+                    </div>
+                </form>
+            ) : (
+                <form className="space-y-6" onSubmit={handleVerifyOtp}>
+                    <p className="text-center text-sm text-gray-600 mb-4">
+                        We sent a code to <span className="font-semibold">{email}</span>
+                    </p>
+
+                    <Input
+                        label="Verification Code"
+                        type="text"
+                        required
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value)}
+                        placeholder="123456"
+                        className="text-center text-2xl tracking-widest"
+                    />
+
+                    {error && (
+                        <div className="rounded-md bg-red-50 p-3 border border-red-100">
+                            <p className="text-sm font-medium text-red-800">{error}</p>
+                        </div>
+                    )}
+
+                    <div>
+                        <Button type="submit" className="w-full h-11 text-base shadow-sm font-semibold" isLoading={loading}>
+                            Verify & Sign In
+                        </Button>
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                disabled={loading}
+                                onClick={handleSendOtp}
+                                className="text-sm font-medium text-indigo-600 hover:text-indigo-500 disabled:opacity-50"
+                            >
+                                Resend Code
+                            </button>
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <button
+                            type="button"
+                            onClick={() => setStep('email')}
+                            className="text-sm text-gray-500 hover:text-gray-900"
+                        >
+                            Change email
+                        </button>
+                    </div>
+                </form>
+            )}
+        </div>
     );
 }
 
