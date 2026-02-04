@@ -84,7 +84,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         // Send Email via Nodemailer
         // Note: The 'from' email must be the one verified in Brevo
         const info = await transporter.sendMail({
-            from: `"Link Generator" <${requestUser}>`, // Use configured user to avoid mismatch
+            from: `"Link Generator" <kalyanpaulfs@gmail.com>`, // Reverted to working local value
             to: email,
             subject: 'Your Login Code',
             html: `
@@ -104,10 +104,14 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
 
     } catch (error: any) {
         console.error('Send OTP Error:', error);
-        // Return protocol response if available for better debugging
+
+        // DEBUGGING: Return config details in error message to verify Vercel State
+        // TODO: Remove this before final production release
+        const debugInfo = `User: '${requestUser}' (Len:${requestUser?.length}), PassLen: ${requestPass?.length}, Port: ${requestPort}`;
+
         return {
             success: false,
-            error: error.response || error.message || 'Failed to send verification code.'
+            error: `${error.response || error.message} | DEBUG: ${debugInfo}`
         };
     }
 }
