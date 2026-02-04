@@ -4,17 +4,33 @@ import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 
 // Initialize Nodemailer Transporter
+// Initialize Nodemailer Transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: false, // true for 465, false for other ports
+    host: process.env.SMTP_HOST?.trim(),
+    port: Number(process.env.SMTP_PORT?.trim()),
+    secure: Number(process.env.SMTP_PORT?.trim()) === 465, // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: process.env.SMTP_USER?.trim(),
+        pass: process.env.SMTP_PASS?.trim(),
     },
 });
 
 export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup') {
+    // Validate SMTP Configuration
+    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        console.error("Critical: Missing SMTP Environment Variables (SMTP_HOST, SMTP_USER, or SMTP_PASS)");
+        return { success: false, error: "Server misconfiguration: Email service not available." };
+    }
+
+    // DEBUG: Safe logging to check if vars are loaded correctly (do not log actual values)
+    console.log("DEBUG SMTP CONFIG:", {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        userLength: process.env.SMTP_USER?.length,
+        passLength: process.env.SMTP_PASS?.length,
+        userStart: process.env.SMTP_USER?.substring(0, 3) + '...' // First 3 chars only
+    });
+
     try {
         if (!email) throw new Error("Email is required");
 
