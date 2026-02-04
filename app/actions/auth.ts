@@ -56,16 +56,16 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
                 await adminAuth.getUserByEmail(email);
             } catch (e) {
                 // User not found
-                return { success: false, error: "No account found with this email. Please Sign Up first." };
+                return { success: false, error: "No account found. Please Sign Up first." };
             }
         }
 
-        // If Signup Flow: Check if user already exists (optional, but good UX)
+        // If Signup Flow: Check if user already exists
         if (type === 'signup') {
             try {
                 await adminAuth.getUserByEmail(email);
-                // If we get here, user exists
-                // We let them proceed but they won't create a new account
+                // If we get here, user exists -> Check failed for generic signup
+                return { success: false, error: "Account already exists. Please Log In." };
             } catch (e) {
                 // User doesn't exist, which is correct for signup
             }
