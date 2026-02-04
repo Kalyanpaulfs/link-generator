@@ -4,31 +4,47 @@ import { adminDb, adminAuth } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 
 // Initialize Nodemailer Transporter
+const cleanEnv = (value: string | undefined): string => {
+    if (!value) return '';
+    const trimmed = value.trim();
+    // Remove surrounding quotes if present (both single and double)
+    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+        return trimmed.slice(1, -1);
+    }
+    return trimmed;
+};
+
 // Initialize Nodemailer Transporter
+const requestHost = cleanEnv(process.env.SMTP_HOST);
+const requestUser = cleanEnv(process.env.SMTP_USER);
+const requestPass = cleanEnv(process.env.SMTP_PASS);
+const requestPort = Number(cleanEnv(process.env.SMTP_PORT));
+
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST?.trim(),
-    port: Number(process.env.SMTP_PORT?.trim()),
-    secure: Number(process.env.SMTP_PORT?.trim()) === 465, // true for 465, false for other ports
+    host: requestHost,
+    port: requestPort,
+    secure: requestPort === 465, // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER?.trim(),
-        pass: process.env.SMTP_PASS?.trim(),
+        user: requestUser,
+        pass: requestPass,
     },
 });
 
 export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup') {
     // Validate SMTP Configuration
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    if (!requestHost || !requestUser || !requestPass) {
         console.error("Critical: Missing SMTP Environment Variables (SMTP_HOST, SMTP_USER, or SMTP_PASS)");
         return { success: false, error: "Server misconfiguration: Email service not available." };
     }
 
     // DEBUG: Safe logging to check if vars are loaded correctly (do not log actual values)
     console.log("DEBUG SMTP CONFIG:", {
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT,
-        userLength: process.env.SMTP_USER?.length,
-        passLength: process.env.SMTP_PASS?.length,
-        userStart: process.env.SMTP_USER?.substring(0, 3) + '...' // First 3 chars only
+        host: requestHost,
+        port: requestPort,
+        secure: requestPort === 465,
+        userLength: requestUser.length,
+        passLength: requestPass.length,
+        userStart: requestUser.substring(0, 3) + '...' // First 3 chars only
     });
 
     try {
@@ -68,7 +84,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         // Send Email via Nodemailer
         // Note: The 'from' email must be the one verified in Brevo
         const info = await transporter.sendMail({
-            from: `"Link Generator" <kalyanpaulfs@gmail.com>`,
+            from: `"Link Generator" <${requestUser}>`, // Use configured user to avoid mismatch
             to: email,
             subject: 'Your Login Code',
             html: `
@@ -88,7 +104,11 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
 
     } catch (error: any) {
         console.error('Send OTP Error:', error);
-        return { success: false, error: error.message || 'Failed to send verification code.' };
+        // Return protocol response if available for better debugging
+        return {
+            success: false,
+            error: error.response || error.message || 'Failed to send verification code.'
+        };
     }
 }
 
