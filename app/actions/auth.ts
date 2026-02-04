@@ -104,14 +104,9 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
 
     } catch (error: any) {
         console.error('Send OTP Error:', error);
-
-        // DEBUGGING: Return config details in error message to verify Vercel State
-        // TODO: Remove this before final production release
-        const debugInfo = `User: '${requestUser}' (Len:${requestUser?.length}), PassLen: ${requestPass?.length}, Port: ${requestPort}`;
-
         return {
             success: false,
-            error: `${error.response || error.message} | DEBUG: ${debugInfo}`
+            error: error.message || 'Failed to send verification code.'
         };
     }
 }
