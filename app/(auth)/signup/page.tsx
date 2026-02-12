@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { ArrowLeft } from "lucide-react
+import { ArrowLeft } from "lucide-react";    
 
 export default function SignupPage() {
     const [step, setStep] = useState<'email' | 'otp'>('email');
