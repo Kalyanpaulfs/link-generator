@@ -64,14 +64,15 @@ export default function DashboardPage() {
         }
     };
 
-    const handleUpdate = async (id: string, newNumber: string) => {
+    const handleUpdate = async (id: string, newNumber: string, newMessage?: string) => {
         try {
             await updateDoc(doc(db, "links", id), {
-                whatsappNumber: newNumber
+                whatsappNumber: newNumber,
+                customMessage: newMessage
             });
         } catch (e) {
             console.error(e);
-            alert("Failed to update number");
+            alert("Failed to update link");
         }
     };
 

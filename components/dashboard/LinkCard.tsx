@@ -10,13 +10,14 @@ interface LinkCardProps {
     link: LinkData;
     onDelete: (id: string) => void;
     onToggle: (id: string, current: boolean) => void;
-    onUpdate: (id: string, newNumber: string) => void;
+    onUpdate: (id: string, newNumber: string, newMessage?: string) => void;
 }
 
 export function LinkCard({ link, onDelete, onToggle, onUpdate }: LinkCardProps) {
     const fullUrl = `${window.location.origin}/w/${link.slug}`;
     const [isEditing, setIsEditing] = useState(false);
     const [editNumber, setEditNumber] = useState(link.whatsappNumber);
+    const [editMessage, setEditMessage] = useState(link.customMessage || '');
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(fullUrl);
@@ -25,7 +26,7 @@ export function LinkCard({ link, onDelete, onToggle, onUpdate }: LinkCardProps) 
     };
 
     const handleSave = () => {
-        onUpdate(link.id!, editNumber);
+        onUpdate(link.id!, editNumber, editMessage);
         setIsEditing(false);
     };
 
@@ -43,35 +44,49 @@ export function LinkCard({ link, onDelete, onToggle, onUpdate }: LinkCardProps) 
 
 
                         {isEditing ? (
-                            <div className="flex items-center gap-2 mt-1">
-                                <input
-                                    type="text"
-                                    value={editNumber}
-                                    onChange={(e) => setEditNumber(e.target.value)}
-                                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none w-32 transition-all"
-                                    autoFocus
-                                />
-                                <button
-                                    onClick={handleSave}
-                                    className="text-xs bg-gray-900 text-white px-2 py-1 rounded hover:bg-gray-800 transition font-medium"
-                                >
-                                    Save
-                                </button>
-                                <button
-                                    onClick={() => setIsEditing(false)}
-                                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 font-medium"
-                                >
-                                    Cancel
-                                </button>
+                            <div className="flex flex-col gap-2 mt-2 w-full">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium w-16">Number:</span>
+                                    <input
+                                        type="text"
+                                        value={editNumber}
+                                        onChange={(e) => setEditNumber(e.target.value)}
+                                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none w-full max-w-[200px] transition-all"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-sm font-medium">Message:</span>
+                                    <textarea
+                                        value={editMessage}
+                                        onChange={(e) => setEditMessage(e.target.value)}
+                                        placeholder="Optional custom message..."
+                                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none w-full min-h-[60px] transition-all"
+                                    />
+                                </div>
+                                <div className="flex gap-2 mt-1">
+                                    <button
+                                        onClick={handleSave}
+                                        className="text-xs bg-gray-900 text-white px-3 py-1.5 rounded hover:bg-gray-800 transition font-medium"
+                                    >
+                                        Save Changes
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditing(false)}
+                                        className="text-xs text-gray-500 hover:text-gray-700 px-3 py-1.5 font-medium border border-gray-200 rounded hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <div className="flex items-center gap-2 group min-h-[28px]">
                                 <p className="text-sm text-gray-500 font-medium truncate max-w-[150px]">
-                                    +{link.whatsappNumber}
+                                    {link.whatsappNumber}
                                 </p>
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="opacity-0 group-hover:opacity-100 transition-all text-gray-400 hover:text-indigo-600"
+                                    className="text-gray-400 hover:text-indigo-600 transition-colors p-1"
                                     title="Edit Number"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>

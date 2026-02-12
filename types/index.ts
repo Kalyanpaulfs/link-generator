@@ -54,6 +54,7 @@ export interface LinkData {
     slug: string;
     userId: string;
     whatsappNumber: string;
+    customMessage?: string;
     active: boolean;
     clicks?: number;
     createdAt: number;

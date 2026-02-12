@@ -17,6 +17,7 @@ interface CreateLinkModalProps {
 export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalProps) {
     const { user } = useAuth();
     const [whatsapp, setWhatsapp] = useState('+91'); // Default to +91
+    const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -79,6 +80,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                 slug,
                 userId: user.uid,
                 whatsappNumber: cleanNumber,
+                customMessage: message.trim(),
                 active: true,
                 clicks: 0,
                 createdAt: now
@@ -86,7 +88,10 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
             console.log("CreateLinkModal: Success");
 
+            console.log("CreateLinkModal: Success");
+
             setWhatsapp('+91'); // Reset to default
+            setMessage('');
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -134,6 +139,19 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                             className="text-lg tracking-wide"
                         />
                         <p className="text-xs text-gray-400 -mt-2">Include country code, no spaces or dashes.</p>
+
+                        <p className="text-xs text-gray-400 -mt-2">Include country code, no spaces or dashes.</p>
+
+                        <div className="space-y-1">
+                            <label className="text-sm font-medium text-gray-700">Custom Message (Optional)</label>
+                            <textarea
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring-gray-500 sm:text-sm placeholder-gray-400 py-2.5 px-3 transition-colors min-h-[80px]"
+                                placeholder="Hello, I'm interested in your services..."
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-400">This message will be pre-filled when users click your link.</p>
+                        </div>
 
                         {error && (
                             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-100 flex items-center gap-2">

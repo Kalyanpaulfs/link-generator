@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 interface LinkData {
     userId: string;
     whatsappNumber: string;
+    customMessage?: string;
     active: boolean;
     slug: string;
 }
@@ -75,9 +76,10 @@ export async function GET(
         });
 
         const number = link.whatsappNumber.replace(/[^\d]/g, '');
+        const message = link.customMessage ? `?text=${encodeURIComponent(link.customMessage)}` : '';
 
         // 5. Redirect
-        return NextResponse.redirect(`https://wa.me/${number}`);
+        return NextResponse.redirect(`https://wa.me/${number}${message}`);
 
     } catch (error) {
         console.error("Redirect Error:", error);
