@@ -7,7 +7,7 @@ import { db } from "@/lib/firebase"; // Ensure firebase-admin is initialized if 
 // Next.js Server Actions run on the server. We should use `firebase-admin`.
 // I need `lib/firebase-admin.ts`. I saw it in the file list.
 
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { Payment } from "@/types";
 import { Timestamp, Transaction } from "firebase-admin/firestore";
 
@@ -18,10 +18,10 @@ export async function submitPayment(userId: string, planId: string, utrNumber: s
 
     try {
         // Create Subscription Record (Pending)
-        const subRef = adminDb.collection('subscriptions').doc();
-        const paymentRef = adminDb.collection('payments').doc();
+        const subRef = getAdminDb().collection('subscriptions').doc();
+        const paymentRef = getAdminDb().collection('payments').doc();
 
-        await adminDb.runTransaction(async (t: Transaction) => {
+        await getAdminDb().runTransaction(async (t: Transaction) => {
             // Create pending subscription
             t.set(subRef, {
                 id: subRef.id,
@@ -47,7 +47,7 @@ export async function submitPayment(userId: string, planId: string, utrNumber: s
             });
 
             // Update user status to pending so UI reflects it immediately
-            const userRef = adminDb.collection('users').doc(userId);
+            const userRef = getAdminDb().collection('users').doc(userId);
             console.log("Updating user status to pending for:", userId);
             t.update(userRef, {
                 subscriptionStatus: 'pending'

@@ -1,12 +1,12 @@
 "use server";
 
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { Timestamp } from "firebase-admin/firestore";
 
 export async function activateTrial(userId: string) {
     try {
-        await adminDb.runTransaction(async (t) => {
-            const userRef = adminDb.collection('users').doc(userId);
+        await getAdminDb().runTransaction(async (t) => {
+            const userRef = getAdminDb().collection('users').doc(userId);
             const userDoc = await t.get(userRef);
 
             if (!userDoc.exists) throw new Error("User not found");

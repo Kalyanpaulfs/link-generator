@@ -1,4 +1,4 @@
-import { adminDb } from "@/lib/firebase-admin";
+import { getAdminDb } from "@/lib/firebase-admin";
 import { type NextRequest, NextResponse } from "next/server";
 import * as admin from "firebase-admin";
 
@@ -31,7 +31,7 @@ export async function GET(
 
     try {
         // 1. Lookup Link
-        const linksRef = adminDb.collection("links");
+        const linksRef = getAdminDb().collection("links");
         const snapshot = await linksRef.where("slug", "==", slug).limit(1).get();
 
         if (snapshot.empty) {
@@ -47,7 +47,7 @@ export async function GET(
         }
 
         // 3. User Subscription Check
-        const userSnapshot = await adminDb.collection("users").doc(link.userId).get();
+        const userSnapshot = await getAdminDb().collection("users").doc(link.userId).get();
 
         if (!userSnapshot.exists) {
             return new NextResponse("Invalid Link Owner", { status: 404 });

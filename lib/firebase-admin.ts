@@ -21,7 +21,7 @@ function formatPrivateKey(key: string) {
     return formatted;
 }
 
-export function createFirebaseAdminApp() {
+export function getAdminApp() {
     if (admin.apps.length > 0) {
         return admin.apps[0]!;
     }
@@ -31,9 +31,9 @@ export function createFirebaseAdminApp() {
     const privateKey = process.env.FIREBASE_PRIVATE_KEY;
 
     if (!projectId || !clientEmail || !privateKey) {
-        // In build time or if envs are missing, this might throw or return null.
-        // For server actions we expect these to be present.
-        throw new Error("Missing Firebase Admin credentials in environment variables.");
+        // Log locally but don't crash the whole module at build time
+        console.warn("Firebase Admin credentials missing. This is normal during build unless these are required for static generation.");
+        return null;
     }
 
     return admin.initializeApp({
@@ -45,6 +45,15 @@ export function createFirebaseAdminApp() {
     });
 }
 
-const app = createFirebaseAdminApp();
-export const adminDb = app.firestore();
-export const adminAuth = app.auth();
+// Lazy getters to prevent crashes during module evaluation (build time)
+export const getAdminDb = () => {
+    const app = getAdminApp();
+    if (!app) throw new Error("Firestore Admin Database not available - missing credentials.");
+    return app.firestore();
+};
+
+export const getAdminAuth = () => {
+    const app = getAdminApp();
+    if (!app) throw new Error("Firebase Admin Auth not available - missing credentials.");
+    return app.auth();
+};

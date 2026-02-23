@@ -1,6 +1,6 @@
 'use server'
 
-import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
 
 // Initialize Nodemailer Transporter
@@ -53,7 +53,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         // If Login Flow: Check if user exists first
         if (type === 'login') {
             try {
-                await adminAuth.getUserByEmail(email);
+                await getAdminAuth().getUserByEmail(email);
             } catch (e) {
                 // User not found
                 return { success: false, error: "No account found. Please Sign Up first." };
@@ -63,7 +63,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         // If Signup Flow: Check if user already exists
         if (type === 'signup') {
             try {
-                await adminAuth.getUserByEmail(email);
+                await getAdminAuth().getUserByEmail(email);
                 // If we get here, user exists -> Check failed for generic signup
                 return { success: false, error: "Account already exists. Please Log In." };
             } catch (e) {
@@ -75,7 +75,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
 
         // Store in Firestore otps collection
-        await adminDb.collection('otps').doc(email).set({
+        await getAdminDb().collection('otps').doc(email).set({
             otp,
             expiresAt,
             email
@@ -113,7 +113,7 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
 
 export async function verifyOtp(email: string, otp: string, type: 'login' | 'signup' = 'signup') {
     try {
-        const docRef = adminDb.collection('otps').doc(email);
+        const docRef = getAdminDb().collection('otps').doc(email);
         const docSnap = await docRef.get();
 
         if (!docSnap.exists) {
@@ -138,7 +138,7 @@ export async function verifyOtp(email: string, otp: string, type: 'login' | 'sig
         let isNewUser = false;
 
         try {
-            const userRecord = await adminAuth.getUserByEmail(email);
+            const userRecord = await getAdminAuth().getUserByEmail(email);
             uid = userRecord.uid;
         } catch (e) {
             // User does not exist.
@@ -151,7 +151,7 @@ export async function verifyOtp(email: string, otp: string, type: 'login' | 'sig
             // Create user ONLY if type is signup
             if (type === 'signup') {
                 try {
-                    const newUser = await adminAuth.createUser({
+                    const newUser = await getAdminAuth().createUser({
                         email,
                         emailVerified: true
                     });
@@ -168,7 +168,7 @@ export async function verifyOtp(email: string, otp: string, type: 'login' | 'sig
 
         // If new user, initialize Firestore data
         if (isNewUser) {
-            await adminDb.collection('users').doc(uid).set({
+            await getAdminDb().collection('users').doc(uid).set({
                 uid: uid,
                 email: email,
                 role: "user",
@@ -179,7 +179,7 @@ export async function verifyOtp(email: string, otp: string, type: 'login' | 'sig
         }
 
         // Generate Custom Token for client-side login
-        const token = await adminAuth.createCustomToken(uid);
+        const token = await getAdminAuth().createCustomToken(uid);
 
         return { success: true, token, isNewUser };
     } catch (error: any) {
