@@ -27,8 +27,14 @@ service cloud.firestore {
         data.userId == request.auth.uid && 
         data.slug.size() >= 4 && 
         data.slug.size() <= 30 &&
-        data.active is bool
+        data.active is bool &&
+        (data.clicks == 0 || data.clicks == null) // Initial clicks must be 0
       );
+    }
+
+    match /otps/{email} {
+      // Auth OTPs are handled exclusively via Admin SDK (server actions)
+      allow read, write: if false;
     }
 
     // --- Collection Rules ---
