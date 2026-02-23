@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { app, db } from "@/lib/firebase";
+import { getDb, getClientAuth } from "@/lib/firebase";
 import { UserData } from "@/types";
 import { useRouter } from "next/navigation";
 
@@ -12,8 +12,7 @@ export function useAdmin() {
     const router = useRouter();
 
     useEffect(() => {
-        const auth = getAuth(app);
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        const unsubscribe = onAuthStateChanged(getClientAuth(), async (user) => {
             if (!user) {
                 setIsAdmin(false);
                 router.push("/login?redirect=/admin");
@@ -21,7 +20,7 @@ export function useAdmin() {
             }
 
             try {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
+                const userDoc = await getDoc(doc(getDb(), "users", user.uid));
                 if (userDoc.exists()) {
                     const userData = userDoc.data() as UserData;
                     if (userData.role === 'admin') {

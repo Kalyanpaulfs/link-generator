@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { db } from '@/lib/firebase';
+import { getDb } from '@/lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
 import { nanoid } from 'nanoid';
@@ -76,7 +76,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
 
             console.log("CreateLinkModal: Attempting addDoc", { slug, userId: user.uid, whatsapp: cleanNumber });
 
-            await addDoc(collection(db, "links"), {
+            await addDoc(collection(getDb(), "links"), {
                 slug,
                 userId: user.uid,
                 whatsappNumber: cleanNumber,

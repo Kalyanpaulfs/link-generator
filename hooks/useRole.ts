@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { app, db } from "@/lib/firebase";
+import { getDb, getClientAuth } from "@/lib/firebase";
 import { UserData } from "@/types";
 
 export function useRole() {
@@ -11,8 +11,7 @@ export function useRole() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const auth = getAuth(app);
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(getClientAuth(), (user) => {
             if (!user) {
                 setUserData(null);
                 setLoading(false);
@@ -20,7 +19,7 @@ export function useRole() {
             }
 
             // Real-time listener for user document
-            const userRef = doc(db, "users", user.uid);
+            const userRef = doc(getDb(), "users", user.uid);
             const userUnsub = onSnapshot(userRef, (docSnap) => {
                 if (docSnap.exists()) {
                     setUserData(docSnap.data() as UserData);

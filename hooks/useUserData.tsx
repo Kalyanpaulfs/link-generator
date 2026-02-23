@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { UserData } from "@/types";
 
 export function useUserData() {
@@ -20,7 +20,7 @@ export function useUserData() {
             return;
         }
 
-        const unsubscribe = onSnapshot(doc(db, "users", user.uid), (doc) => {
+        const unsubscribe = onSnapshot(doc(getDb(), "users", user.uid), (doc) => {
             if (doc.exists()) {
                 setUserData(doc.data() as UserData);
             } else {

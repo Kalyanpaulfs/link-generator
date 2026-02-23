@@ -1,6 +1,4 @@
 "use server";
-
-import { db } from "@/lib/firebase"; // Ensure firebase-admin is initialized if running on server? 
 // Wait, lib/firebase.ts uses client SDK.
 // For server actions, we should strictly use `firebase-admin` to bypass client rules if needed, 
 // OR use the client SDK if we authenticate via token?

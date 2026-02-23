@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getClientAuth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 
 export function useAuth() {
@@ -12,7 +12,7 @@ export function useAuth() {
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
+        const unsubscribe = onAuthStateChanged(getClientAuth(), (user) => {
             setUser(user);
             setLoading(false);
         });

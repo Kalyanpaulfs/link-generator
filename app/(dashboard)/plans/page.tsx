@@ -39,10 +39,8 @@ export default function PlansPage() {
                 // Actually layout allows this page even if not subscribed.
 
                 // We need the UID.
-                const { getAuth } = await import('firebase/auth');
-                const { app } = await import('@/lib/firebase');
-                const auth = getAuth(app);
-                const user = auth.currentUser;
+                const { getClientAuth } = await import('@/lib/firebase');
+                const user = getClientAuth().currentUser;
 
                 if (!user) {
                     alert("Please log in to select a plan.");

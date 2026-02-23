@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Input } from "@/components/ui/Input";
 import { submitPayment } from "@/app/actions/payment";
-import { getAuth } from "firebase/auth";
-import { app, db } from "@/lib/firebase";
+import { getDb, getClientAuth } from "@/lib/firebase";
 import { useSettings } from "@/hooks/useSettings";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
@@ -27,43 +26,27 @@ export default function PaymentPage() {
     const { settings, loading: settingsLoading } = useSettings();
 
     useEffect(() => {
-        const auth = getAuth(app);
-
         const checkSubscription = async (user: any) => {
             if (!user) return;
 
             // Check for existing active/pending subscription
             const q = query(
-                collection(db, "subscriptions"),
+                collection(getDb(), "subscriptions"),
                 where("userId", "==", user.uid),
                 where("status", "in", ["active", "pending"])
             );
 
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
-                // Redirect to dashboard
-                // We could show a toast here, but router.push is immediate
-                // DANGER LOOPS: If "Subscribe Now" button sends them here with planId, 
-                // but they have a pending sub, we bounce them to dashboard.
-                // Dashboard sees pending sub -> shows banner.
-                // This is CORRECT behavior.
-
-                // EXCEPT: The user says "Clicked Subscribe Now -> Instant Return".
-                // This means the guard is working (they have a sub), but they are confused.
-                // They expect to be able to pay again? Or they don't know they have a sub?
-
                 console.log("Active/Pending subscription found, redirecting to dashboard");
                 router.push('/dashboard');
-                // Make sure to stop rendering or show loading
             }
         };
 
-        const unsubscribe = auth.onAuthStateChanged((user) => {
+        const unsubscribe = getClientAuth().onAuthStateChanged((user) => {
             if (user) {
                 setCurrentUser(user);
                 checkSubscription(user);
-            } else {
-                // Handle unauth if needed, or let middleware handle it
             }
         });
 

@@ -3,7 +3,7 @@
 import { useAdmin } from "@/hooks/useAdmin";
 import { useEffect, useState } from "react";
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 import { UserData, Role } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { RefreshCw, Shield, ShieldOff, Check, X, Trash2, Eye } from "lucide-react";
@@ -21,14 +21,14 @@ export default function AdminPage() {
         setLoading(true);
         try {
             if (activeTab === 'users') {
-                const querySnapshot = await getDocs(collection(db, "users"));
+                const querySnapshot = await getDocs(collection(getDb(), "users"));
                 const fetchedUsers: UserData[] = [];
                 querySnapshot.forEach((doc) => {
                     fetchedUsers.push(doc.data() as UserData);
                 });
                 setUsers(fetchedUsers);
             } else if (activeTab === 'payments') {
-                const querySnapshot = await getDocs(collection(db, "payments"));
+                const querySnapshot = await getDocs(collection(getDb(), "payments"));
                 const fetchedPayments: any[] = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -38,7 +38,7 @@ export default function AdminPage() {
                 });
                 setPayments(fetchedPayments);
             } else if (activeTab === 'settings') {
-                const docSnap = await getDoc(doc(db, "settings", "global"));
+                const docSnap = await getDoc(doc(getDb(), "settings", "global"));
                 if (docSnap.exists()) {
                     setSettings(docSnap.data() as any);
                 }
@@ -60,7 +60,7 @@ export default function AdminPage() {
     const handleUpdateStatus = async (uid: string, status: 'active' | 'expired') => {
         if (!confirm(`Set user status to ${status}?`)) return;
         try {
-            await updateDoc(doc(db, "users", uid), {
+            await updateDoc(doc(getDb(), "users", uid), {
                 subscriptionStatus: status,
                 subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0
             });
@@ -78,7 +78,7 @@ export default function AdminPage() {
         if (!confirm(`Are you sure you want to ${action} for this user?`)) return;
 
         try {
-            await updateDoc(doc(db, "users", uid), { role: newRole });
+            await updateDoc(doc(getDb(), "users", uid), { role: newRole });
             setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
         } catch (error) {
             console.error("Role update failed", error);
@@ -129,7 +129,7 @@ export default function AdminPage() {
 
     const handleSaveSettings = async () => {
         try {
-            await setDoc(doc(db, "settings", "global"), settings, { merge: true });
+            await setDoc(doc(getDb(), "settings", "global"), settings, { merge: true });
             alert("Settings saved!");
         } catch (error) {
             console.error(error);

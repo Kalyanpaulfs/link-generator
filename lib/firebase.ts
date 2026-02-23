@@ -1,7 +1,7 @@
 // lib/firebase.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, Auth } from "firebase/auth";
+import { getFirestore, Firestore } from "firebase/firestore";
 // import { getAnalytics } from "firebase/analytics"; 
 // Analytics is only for client-side, need to handle strict node env check if we use it.
 
@@ -19,10 +19,23 @@ const firebaseConfig = {
 
 
 
-// Initialize Firebase (Singleton pattern)
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// Initialize Firebase (Singleton pattern) - lazy getter
+let firebaseApp: FirebaseApp | undefined;
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+export function getAuthApp(): FirebaseApp {
+    if (!firebaseApp) {
+        firebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+    }
+    return firebaseApp;
+}
 
-export { app, auth, db };
+export const getDb = (): Firestore => {
+    return getFirestore(getAuthApp());
+};
+
+export const getClientAuth = (): Auth => {
+    return getAuth(getAuthApp());
+};
+
+// Legacy exports for backward compatibility during transition (optional, but getter is safer)
+// We will migrate all files to use the getters.

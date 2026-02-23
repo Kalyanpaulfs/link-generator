@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole"; // Import new hook
 import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getClientAuth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useState, useEffect } from "react";
@@ -40,7 +40,7 @@ export default function DashboardLayout({
 
         // Short delay to allow navigation to start/complete before killing session
         setTimeout(async () => {
-            await signOut(auth);
+            await signOut(getClientAuth());
         }, 500);
     };
 

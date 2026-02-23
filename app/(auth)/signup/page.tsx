@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { signInWithCustomToken } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { getClientAuth, getDb } from "@/lib/firebase";
 import { sendOtp, verifyOtp } from "@/app/actions/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { ArrowLeft } from "lucide-react";    
+import { ArrowLeft } from "lucide-react";
 
 export default function SignupPage() {
     const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -47,7 +47,7 @@ export default function SignupPage() {
         try {
             const res = await verifyOtp(email, otp, 'signup');
             if (res.success && res.token) {
-                await signInWithCustomToken(auth, res.token);
+                await signInWithCustomToken(getClientAuth(), res.token);
                 router.push("/dashboard");
             } else {
                 setError(res.error || "Invalid code.");

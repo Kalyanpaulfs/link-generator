@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { signInWithCustomToken } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getClientAuth } from "@/lib/firebase";
 import { sendOtp, verifyOtp } from "@/app/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -47,7 +47,7 @@ function LoginForm() {
         try {
             const res = await verifyOtp(email, otp, 'login');
             if (res.success && res.token) {
-                await signInWithCustomToken(auth, res.token);
+                await signInWithCustomToken(getClientAuth(), res.token);
                 router.push(redirect);
             } else {
                 setError(res.error || "Invalid code.");

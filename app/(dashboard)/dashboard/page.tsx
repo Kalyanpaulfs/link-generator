@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRequireAuth } from "@/hooks/useAuth";
 import { useRole } from "@/hooks/useRole"; // Import new hook
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase";
+import { getDb, getClientAuth } from "@/lib/firebase";
 import { LinkData } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { CreateLinkModal } from "@/components/dashboard/CreateLinkModal";
@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
         // Fetch Links
         const qLinks = query(
-            collection(db, "links"),
+            collection(getDb(), "links"),
             where("userId", "==", user.uid)
         );
 
@@ -45,7 +45,7 @@ export default function DashboardPage() {
 
     const handleToggle = async (id: string, current: boolean) => {
         try {
-            await updateDoc(doc(db, "links", id), {
+            await updateDoc(doc(getDb(), "links", id), {
                 active: !current
             });
         } catch (e) {
@@ -57,7 +57,7 @@ export default function DashboardPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this link?")) return;
         try {
-            await deleteDoc(doc(db, "links", id));
+            await deleteDoc(doc(getDb(), "links", id));
         } catch (e) {
             console.error(e);
             alert("Failed to delete link");
@@ -66,7 +66,7 @@ export default function DashboardPage() {
 
     const handleUpdate = async (id: string, newNumber: string, newMessage?: string) => {
         try {
-            await updateDoc(doc(db, "links", id), {
+            await updateDoc(doc(getDb(), "links", id), {
                 whatsappNumber: newNumber,
                 customMessage: newMessage
             });

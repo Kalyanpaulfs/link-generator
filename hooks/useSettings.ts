@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
 
 export function useSettings() {
     const [settings, setSettings] = useState<{ upiId?: string; qrCodeUrl?: string }>({});
@@ -9,7 +9,7 @@ export function useSettings() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const docSnap = await getDoc(doc(db, "settings", "global"));
+                const docSnap = await getDoc(doc(getDb(), "settings", "global"));
                 if (docSnap.exists()) {
                     setSettings(docSnap.data());
                 }
