@@ -13,10 +13,19 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // Check if the REQUESTER is an admin by looking up their user document
+    // Check if the REQUESTER is a super_admin
+    function isSuperAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+    }
+
+    // Check if the REQUESTER is an admin (includes super_admin)
     function isAdmin() {
       return isAuthenticated() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin');
     }
 
     function isValidLink() {
@@ -41,26 +50,36 @@ service cloud.firestore {
 
     function isSubscribed() {
       let user = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return user.role == 'admin' || 
+      return user.role == 'admin' || user.role == 'super_admin' || 
              ((user.subscriptionStatus == 'active' || user.subscriptionStatus == 'trial') && 
               (user.subscriptionExpiry > request.time.toMillis()));
     }
 
     match /users/{uid} {
-      // Owner can read, Admin can read/write (to manage subscriptions)
+      // Owner can read their own, Admin/SuperAdmin can read all
       allow read: if isOwner(uid) || isAdmin();
-      allow write: if isAdmin(); 
-      // Note: First admin must be set via Firebase Console or hardcoded rule if needed.
+      
+      // Only Super Admin can change roles or delete users
+      // Regular Admins can update other user data (like subscriptionStatus)
+      allow write: if isSuperAdmin() || (isAdmin() && !('role' in request.resource.data));
+      
+      // Prevent ANYONE from demoting a Super Admin via client SDK
+      allow update: if (isSuperAdmin() || isAdmin()) && 
+                     (resource.data.role != 'super_admin' || request.resource.data.role == 'super_admin');
+
+      // Note: First super_admin must be set via Firebase Console.
     }
 
     match /subscriptions/{subId} {
-        allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        allow get: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        allow list: if isAdmin();
         // Admin creates/updates subscriptions
         allow write: if isAdmin();
     }
 
     match /payments/{payId} {
-        allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        allow get: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+        allow list: if isAdmin();
         // User creates payments
         allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
         // Admin updates status
@@ -69,12 +88,14 @@ service cloud.firestore {
 
     match /settings/{docId} {
         allow read: if isAuthenticated();
+        // Admin can write settings
         allow write: if isAdmin();
     }
 
     match /links/{linkId} {
-      // Owner can read/write, Admin can read (to view all links)
-      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      // Owner can read/write, Admin can read/list
+      allow get: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow list: if (isAuthenticated() && query.limit <= 100) || isAdmin(); // Standard limit or admin
       
       // Admin can also delete/update specific links if needed (moderation)
       allow write: if isAdmin();

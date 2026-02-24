@@ -7,10 +7,11 @@ import { getDb } from "@/lib/firebase";
 import { UserData, Role } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { RefreshCw, Shield, ShieldOff, Check, X, Trash2, Eye } from "lucide-react";
-import { approvePayment, rejectPayment } from "@/app/actions/admin";
+import { isProtected } from "@/lib/constants";
+import { approvePayment, rejectPayment, updateUserRole } from "@/app/actions/admin";
 
 export default function AdminPage() {
-    const { isAdmin } = useAdmin();
+    const { isAdmin, isSuperAdmin } = useAdmin();
     const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'settings'>('payments');
     const [users, setUsers] = useState<UserData[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
@@ -71,22 +72,35 @@ export default function AdminPage() {
         }
     };
 
-    const handlePromoteAdmin = async (uid: string, currentRole: Role) => {
+    const handlePromoteAdmin = async (uid: string, currentRole: Role, email: string) => {
+        if (isProtected(email) && currentRole === 'admin') {
+            alert("This is a protected admin account and cannot be demoted.");
+            return;
+        }
+
         const newRole = currentRole === 'admin' ? 'user' : 'admin';
         const action = newRole === 'admin' ? 'Promote to Admin' : 'Remove Admin Access';
 
         if (!confirm(`Are you sure you want to ${action} for this user?`)) return;
 
         try {
-            await updateDoc(doc(getDb(), "users", uid), { role: newRole });
-            setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
+            const result = await updateUserRole(uid, newRole);
+            if (result.success) {
+                setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
+            } else {
+                alert(result.error);
+            }
         } catch (error) {
             console.error("Role update failed", error);
             alert("Failed to update role");
         }
     };
 
-    const handleDeleteUser = async (uid: string) => {
+    const handleDeleteUser = async (uid: string, email: string) => {
+        if (isProtected(email)) {
+            alert("This is a protected admin account and cannot be deleted.");
+            return;
+        }
         if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
         try {
             const { deleteUser } = await import("@/app/actions/admin");
@@ -146,7 +160,9 @@ export default function AdminPage() {
                 <header className="mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-900 flex items-center gap-3">
-                            <span className="bg-red-600 text-xs px-2 py-1 rounded text-white uppercase tracking-wider">Super Admin</span>
+                            <span className="bg-red-600 text-xs px-2 py-1 rounded text-white uppercase tracking-wider">
+                                {isSuperAdmin ? "Super Admin" : "Admin"}
+                            </span>
                             Dashboard
                         </h1>
                         <p className="text-gray-500 mt-1">Manage users, subscriptions, and approvals.</p>
@@ -245,42 +261,116 @@ export default function AdminPage() {
                         )}
 
                         {activeTab === 'users' && (
-                            <div className="hidden md:block bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
-                                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Controls</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {users.map((user) => (
-                                            <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-900">{user.email}</div>
-                                                    <div className="text-xs text-gray-500">UID: {user.uid}</div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
-                                                        {user.role}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            <>
+                                {/* Desktop Table View */}
+                                <div className="hidden md:block bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Controls</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {users.map((user) => (
+                                                <tr key={user.uid} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm font-medium text-gray-900">{user.email}</div>
+                                                        <div className="text-xs text-gray-500">UID: {user.uid}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'super_admin' ? 'bg-indigo-100 text-indigo-800' : user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                            {user.role}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                            {user.subscriptionStatus}
+                                                        </span>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handlePromoteAdmin(user.uid, user.role, user.email)}
+                                                            className={user.role === 'admin' ? 'text-orange-600' : 'text-purple-600'}
+                                                            disabled={!isSuperAdmin || user.role === 'super_admin'}
+                                                        >
+                                                            {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+                                                        </Button>
+                                                        {user.subscriptionStatus !== 'active' ? (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleUpdateStatus(user.uid, 'active')}
+                                                                className="text-green-600"
+                                                            >
+                                                                <Check className="w-4 h-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleUpdateStatus(user.uid, 'expired')}
+                                                                className="text-red-600"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteUser(user.uid, user.email)}
+                                                            className="text-gray-400 hover:text-red-600"
+                                                            disabled={!isSuperAdmin || user.role === 'super_admin'}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Card View */}
+                                <div className="md:hidden space-y-4">
+                                    {users.map((user) => (
+                                        <div key={user.uid} className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <div className="overflow-hidden">
+                                                    <div className="text-sm font-bold text-gray-900 truncate">{user.email}</div>
+                                                    <div className="text-[10px] text-gray-500 truncate">UID: {user.uid}</div>
+                                                </div>
+                                                <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${user.role === 'super_admin' ? 'bg-indigo-100 text-indigo-800' : user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
+                                                    {user.role}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center justify-between text-xs mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`px-2 py-0.5 rounded-full font-medium ${user.subscriptionStatus === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                                         {user.subscriptionStatus}
                                                     </span>
-                                                    <div className="text-xs text-gray-500 mt-1">
-                                                        {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'N/A'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
+                                                    <span className="text-gray-400">
+                                                        {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'No expiry'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                                                <div className="flex gap-1">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handlePromoteAdmin(user.uid, user.role)}
+                                                        onClick={() => handlePromoteAdmin(user.uid, user.role, user.email)}
                                                         className={user.role === 'admin' ? 'text-orange-600' : 'text-purple-600'}
+                                                        disabled={!isSuperAdmin || user.role === 'super_admin'}
                                                     >
                                                         {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
                                                     </Button>
@@ -303,20 +393,21 @@ export default function AdminPage() {
                                                             <X className="w-4 h-4" />
                                                         </Button>
                                                     )}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDeleteUser(user.uid)}
-                                                        className="text-gray-400 hover:text-red-600"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                </div>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleDeleteUser(user.uid, user.email)}
+                                                    className="text-gray-400 hover:text-red-600"
+                                                    disabled={!isSuperAdmin || user.role === 'super_admin'}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
 
                         {activeTab === 'settings' && (

@@ -43,8 +43,9 @@ export function useRole() {
         role: userData?.role,
         userData,
         loading,
-        isAdmin: userData?.role === 'admin',
-        isSubscribed: userData?.role === 'admin' || userData?.subscriptionStatus === 'active' || userData?.subscriptionStatus === 'trial',
+        isAdmin: userData?.role === 'admin' || userData?.role === 'super_admin',
+        isSuperAdmin: userData?.role === 'super_admin',
+        isSubscribed: userData?.role === 'admin' || userData?.role === 'super_admin' || userData?.subscriptionStatus === 'active' || userData?.subscriptionStatus === 'trial',
         subscriptionStatus: userData?.subscriptionStatus
     };
 }

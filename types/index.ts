@@ -1,7 +1,7 @@
 // types/index.ts
 // Shared interfaces for the application
 
-export type Role = 'user' | 'admin';
+export type Role = 'user' | 'admin' | 'super_admin';
 export type SubscriptionStatus = 'active' | 'trial' | 'expired' | 'pending' | 'rejected' | 'none';
 export type PaymentStatus = 'pending' | 'approved' | 'rejected';
 

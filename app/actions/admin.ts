@@ -3,6 +3,8 @@
 import { getAdminDb, getAdminAuth } from "@/lib/firebase-admin";
 import { Timestamp, Transaction } from "firebase-admin/firestore";
 import { getPlan } from "@/lib/plans";
+import { Role } from "@/types";
+import { isProtected } from "@/lib/constants";
 
 export async function approvePayment(paymentId: string) {
     try {
@@ -97,17 +99,55 @@ export async function rejectPayment(paymentId: string, reason: string) {
     }
 }
 
+export async function updateUserRole(userId: string, newRole: Role) {
+    try {
+        const userRef = getAdminDb().collection('users').doc(userId);
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) throw new Error("User not found");
+
+        const userData = userSnap.data() as any;
+
+        // Protect Super Admin from demotion
+        if (userData.role === 'super_admin' && newRole !== 'super_admin') {
+            throw new Error("Cannot demote a Super Admin account");
+        }
+
+        // Hardcoded protection fallback for the owner's email
+        if (isProtected(userData.email) && newRole !== 'super_admin' && newRole !== 'admin') {
+            throw new Error("Cannot demote the primary owner account");
+        }
+
+        await userRef.update({ role: newRole });
+        return { success: true };
+    } catch (error: any) {
+        console.error("Role update failed:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function deleteUser(userId: string) {
     try {
+        const userRef = getAdminDb().collection('users').doc(userId);
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) throw new Error("User not found");
+
+        const userData = userSnap.data() as any;
+
+        // Protect Super Admin from deletion
+        if (userData.role === 'super_admin') {
+            throw new Error("Cannot delete a Super Admin account");
+        }
+
+        // Hardcoded protection fallback for the owner's email
+        if (isProtected(userData.email)) {
+            throw new Error("Cannot delete the primary owner account");
+        }
+
         // Delete from Firebase Auth
         await getAdminAuth().deleteUser(userId);
 
         // Delete from Firestore
-        await getAdminDb().collection('users').doc(userId).delete();
-
-        // Optional: Delete related subscriptions/payments? 
-        // For now, keeping them for audit might be safer or we can cascade delete.
-        // Let's stick to user cleanup.
+        await userRef.delete();
 
         return { success: true };
     } catch (error: any) {
