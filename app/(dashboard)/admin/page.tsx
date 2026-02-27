@@ -2,16 +2,19 @@
 
 import { useAdmin } from "@/hooks/useAdmin";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { collection, getDocs, doc, updateDoc, deleteDoc, getDoc, setDoc } from "firebase/firestore";
-import { getDb } from "@/lib/firebase";
+import { getDb, getClientAuth } from "@/lib/firebase";
+import { signInWithCustomToken } from "firebase/auth";
 import { UserData, Role } from "@/types";
 import { Button } from "@/components/ui/Button";
-import { RefreshCw, Shield, ShieldOff, Check, X, Trash2, Eye } from "lucide-react";
+import { RefreshCw, Shield, ShieldOff, Check, X, Trash2, Eye, UserCircle } from "lucide-react";
 import { isProtected } from "@/lib/constants";
-import { approvePayment, rejectPayment, updateUserRole } from "@/app/actions/admin";
+import { approvePayment, rejectPayment, updateUserRole, impersonateUser } from "@/app/actions/admin";
 
 export default function AdminPage() {
     const { isAdmin, isSuperAdmin } = useAdmin();
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'settings'>('payments');
     const [users, setUsers] = useState<UserData[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
@@ -148,6 +151,28 @@ export default function AdminPage() {
         } catch (error) {
             console.error(error);
             alert("Failed to save settings");
+        }
+    };
+
+    const handleImpersonate = async (uid: string) => {
+        if (!confirm("Are you sure you want to log in as this user? You will be signed out from your admin account.")) return;
+
+        try {
+            const requesterUid = getClientAuth().currentUser?.uid;
+            if (!requesterUid) throw new Error("No authenticated requester found");
+
+            const result = await impersonateUser(uid, requesterUid);
+            if (result.success && result.token) {
+                await signInWithCustomToken(getClientAuth(), result.token);
+                // Redirect to dashboard as the new user
+                router.push("/dashboard");
+                router.refresh(); // Ensure layout/state updates
+            } else {
+                alert("Impersonation failed: " + result.error);
+            }
+        } catch (error) {
+            console.error("Auth switch failed", error);
+            alert("Failed to switch user account.");
         }
     };
 
@@ -300,9 +325,21 @@ export default function AdminPage() {
                                                             onClick={() => handlePromoteAdmin(user.uid, user.role, user.email)}
                                                             className={user.role === 'admin' ? 'text-orange-600' : 'text-purple-600'}
                                                             disabled={!isSuperAdmin || user.role === 'super_admin'}
+                                                            title={user.role === 'admin' ? "Demote to User" : "Promote to Admin"}
                                                         >
                                                             {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
                                                         </Button>
+                                                        {isSuperAdmin && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleImpersonate(user.uid)}
+                                                                className="text-blue-600"
+                                                                title="Login as User"
+                                                            >
+                                                                <UserCircle className="w-4 h-4" />
+                                                            </Button>
+                                                        )}
                                                         {user.subscriptionStatus !== 'active' ? (
                                                             <Button
                                                                 variant="ghost"
@@ -374,6 +411,16 @@ export default function AdminPage() {
                                                     >
                                                         {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
                                                     </Button>
+                                                    {isSuperAdmin && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleImpersonate(user.uid)}
+                                                            className="text-blue-600"
+                                                        >
+                                                            <UserCircle className="w-4 h-4" />
+                                                        </Button>
+                                                    )}
                                                     {user.subscriptionStatus !== 'active' ? (
                                                         <Button
                                                             variant="ghost"

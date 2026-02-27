@@ -64,7 +64,7 @@ export async function GET(
             const isExpired = user.subscriptionExpiry && user.subscriptionExpiry < now;
 
             if (!isActive || isExpired) {
-                return new NextResponse("Subscription Required or Expired", { status: 402 });
+                return NextResponse.redirect(new URL("/subscription-expired", request.url));
             }
         }
 

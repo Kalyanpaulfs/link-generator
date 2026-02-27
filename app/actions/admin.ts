@@ -155,3 +155,31 @@ export async function deleteUser(userId: string) {
         return { success: false, error: error.message };
     }
 }
+
+export async function impersonateUser(targetUid: string, requesterUid: string) {
+    try {
+        // 1. Verify requester is a super_admin
+        const requesterRef = getAdminDb().collection('users').doc(requesterUid);
+        const requesterSnap = await requesterRef.get();
+        if (!requesterSnap.exists) throw new Error("Requester not found");
+
+        const requesterData = requesterSnap.data();
+        if (requesterData?.role !== 'super_admin') {
+            throw new Error("Unauthorized: Only Super Admins can impersonate users.");
+        }
+
+        // 2. Verification: Check if target user exists
+        const userRef = getAdminDb().collection('users').doc(targetUid);
+        const userSnap = await userRef.get();
+        if (!userSnap.exists) {
+            throw new Error("Target user not found in database.");
+        }
+
+        // 3. Generate Custom Token
+        const token = await getAdminAuth().createCustomToken(targetUid);
+        return { success: true, token };
+    } catch (error: any) {
+        console.error("Impersonation failed:", error);
+        return { success: false, error: error.message };
+    }
+}

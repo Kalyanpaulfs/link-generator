@@ -8,7 +8,8 @@ import { getClientAuth } from "@/lib/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, MessageCircle } from "lucide-react";
+import { SupportFloatingButton } from "@/components/dashboard/SupportFloatingButton";
 
 
 export default function DashboardLayout({
@@ -66,6 +67,19 @@ export default function DashboardLayout({
                         We have received your payment details. Admin approval typically takes 30 minutes. You will access the dashboard once approved.
                     </p>
                     <Button onClick={() => window.location.reload()} variant="outline">Check Status</Button>
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                        <p className="text-xs text-gray-400 uppercase tracking-widest font-bold mb-3">Quick Support</p>
+                        <a
+                            href="https://wa.me/917004516415?text=Hi%20LinkGen%20Support%2C%20I've%20made%20a%20payment%20and%20waiting%20for%20approval."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-green-600 font-bold hover:text-green-700 transition-colors"
+                        >
+                            <MessageCircle className="w-5 h-5" />
+                            Message Support on WhatsApp
+                        </a>
+                        <p className="text-[10px] text-gray-400 mt-2">+91 7004516415</p>
+                    </div>
                     <div className="mt-4">
                         <Button variant="ghost" className="text-sm text-gray-400" onClick={handleLogout}>Sign Out</Button>
                     </div>
@@ -166,6 +180,14 @@ export default function DashboardLayout({
                                     Admin
                                 </Link>
                             )}
+                            <a
+                                href="https://wa.me/917004516415"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors"
+                            >
+                                Support
+                            </a>
                         </div>
                         <div className="pt-4 pb-4 border-t border-gray-200">
                             {/* ... mobile profile ... */}
@@ -188,6 +210,7 @@ export default function DashboardLayout({
             <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {children}
             </main>
+            <SupportFloatingButton />
         </div>
     );
 }

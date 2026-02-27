@@ -12,10 +12,12 @@ import { CreateLinkModal } from "@/components/dashboard/CreateLinkModal";
 import { LinkCard } from "@/components/dashboard/LinkCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { BarChart3, Link as LinkIcon, Star } from "lucide-react";
+import { SubscriptionStatus } from "@/components/dashboard/SubscriptionStatus";
+
 
 export default function DashboardPage() {
     const { user, loading } = useRequireAuth();
-    const { subscriptionStatus, loading: roleLoading, isAdmin } = useRole(); // Use central hook
+    const { userData, loading: roleLoading, isAdmin } = useRole(); // Use central hook
     const [links, setLinks] = useState<LinkData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -76,10 +78,10 @@ export default function DashboardPage() {
         }
     };
 
-    const isPending = subscriptionStatus === 'pending';
-    const isActive = subscriptionStatus === 'active';
-    // Add trial status check
-    const isTrial = subscriptionStatus === 'trial';
+    const status = userData?.subscriptionStatus;
+    const isPending = status === 'pending';
+    const isActive = status === 'active';
+    const isTrial = status === 'trial';
 
     // Logic: Active users can always create. Trial users can create only if they have < 1 link. Admins can always create.
     const canCreateLink = isAdmin || (!isPending && (isActive || (isTrial && links.length < 1)));
@@ -106,52 +108,9 @@ export default function DashboardPage() {
                 </Button>
             </div>
 
-            {/* Pending Payment Banner */}
-            {isPending && (
-                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-md animate-in fade-in slide-in-from-top-4">
-                    <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                            {/* Icon */}
-                            <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                        </div>
-                        <div className="ml-3">
-                            <p className="text-sm text-yellow-700">
-                                <strong className="font-medium">Payment Under Review.</strong> Your subscription is currently being verified by an admin. You will be notified once it is approved. Link creation is paused until then.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Subscription Status Card */}
+            <SubscriptionStatus userData={userData} />
 
-            {/* No Active Plan Banner */}
-            {!isPending && !isActive && !isTrial && !isAdmin && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-md">
-                    <div className="flex">
-                        <div className="ml-3">
-                            <p className="text-sm text-red-700">
-                                <strong className="font-medium">No Active Plan.</strong> Please select a plan to start creating links.
-                                <a href="/plans" className="ml-2 font-bold underline hover:text-red-800">View Plans</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Trial Limit Banner (Only show if they are on trial and hit the limit, AND NOT ADMIN) */}
-            {isTrial && links.length >= 1 && !isAdmin && (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-md">
-                    <div className="flex">
-                        <div className="ml-3">
-                            <p className="text-sm text-blue-700">
-                                <strong className="font-medium">Trial Limit Reached.</strong> You can create 1 link on the free trial. Upgrade to create more.
-                                <a href="/plans" className="ml-2 font-bold underline hover:text-blue-800">Upgrade Plan</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
 
 
             {/* Quick Stats Grid */}
