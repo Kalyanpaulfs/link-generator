@@ -37,7 +37,7 @@ service cloud.firestore {
         data.slug.size() >= 4 && 
         data.slug.size() <= 30 &&
         data.active is bool &&
-        (data.clicks == 0 || data.clicks == null) // Initial clicks must be 0
+        (data.get('clicks', 0) == 0) // Initial clicks must be 0
       );
     }
 
@@ -47,8 +47,8 @@ service cloud.firestore {
       return (
         data.whatsappNumber is string &&
         data.userId == request.auth.uid &&
-        data.slug == resource.data.slug &&          // Slug cannot be changed
-        data.clicks == resource.data.clicks          // Clicks cannot be tampered with
+        data.get('slug', '') == resource.data.get('slug', '') &&          // Slug cannot be changed
+        data.get('clicks', 0) == resource.data.get('clicks', 0)          // Clicks cannot be tampered with
       );
     }
 
