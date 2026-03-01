@@ -41,6 +41,17 @@ service cloud.firestore {
       );
     }
 
+    // Separate validation for updates: allows existing clicks, prevents slug/clicks tampering
+    function isValidLinkUpdate() {
+      let data = request.resource.data;
+      return (
+        data.whatsappNumber is string &&
+        data.userId == request.auth.uid &&
+        data.slug == resource.data.slug &&          // Slug cannot be changed
+        data.clicks == resource.data.clicks          // Clicks cannot be tampered with
+      );
+    }
+
     match /otps/{email} {
       // Auth OTPs are handled exclusively via Admin SDK (server actions)
       allow read, write: if false;
@@ -110,7 +121,7 @@ service cloud.firestore {
                     resource.data.userId == request.auth.uid &&
                     request.resource.data.userId == request.auth.uid &&
                     isSubscribed() &&
-                    isValidLink();
+                    isValidLinkUpdate();
 
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }

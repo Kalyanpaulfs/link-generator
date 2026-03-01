@@ -16,7 +16,7 @@ interface UserData {
     uid: string;
     subscriptionStatus: 'trial' | 'active' | 'expired' | 'pending' | 'none';
     subscriptionExpiry: number;
-    role: 'user' | 'admin';
+    role: 'user' | 'admin' | 'super_admin';
 }
 
 export async function GET(
@@ -56,8 +56,8 @@ export async function GET(
         const user = userSnapshot.data() as UserData;
         const now = Date.now();
 
-        // Admin always active
-        if (user.role === 'admin') {
+        // Admin / Super Admin always active
+        if (user.role === 'admin' || user.role === 'super_admin') {
             // pass
         } else {
             const isActive = (user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trial');
