@@ -12,11 +12,8 @@ export async function activateTrial(userId: string) {
             if (!userDoc.exists) throw new Error("User not found");
             const userData = userDoc.data();
 
-            if (userData?.subscriptionStatus !== 'none') {
-                // Already has status (maybe expired or trial used?)
-                // If we want to allow re-trial, strict check mostly needed.
-                // For now, assuming they can only do this if status is 'none'
-                // throw new Error("Trial already used or active subscription exists");
+            if (userData?.subscriptionStatus && userData.subscriptionStatus !== 'none') {
+                throw new Error("Free trial already used or an active subscription exists.");
             }
 
             // Allow trial activation

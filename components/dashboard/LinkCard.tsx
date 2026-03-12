@@ -5,6 +5,7 @@ import { LinkData } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent } from "@/components/ui/Card";
+import { useAlerts } from "@/context/AlertContext";
 
 interface LinkCardProps {
     link: LinkData;
@@ -14,7 +15,8 @@ interface LinkCardProps {
 }
 
 export function LinkCard({ link, onDelete, onToggle, onUpdate }: LinkCardProps) {
-    const fullUrl = `${window.location.origin}/w/${link.slug}`;
+    const { showAlert } = useAlerts();
+    const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}/w/${link.slug}` : '';
     const [isEditing, setIsEditing] = useState(false);
     const [editNumber, setEditNumber] = useState(link.whatsappNumber);
     const [editMessage, setEditMessage] = useState(link.customMessage || '');
@@ -22,7 +24,7 @@ export function LinkCard({ link, onDelete, onToggle, onUpdate }: LinkCardProps) 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(fullUrl);
         // Toast notification would be better here
-        alert("Link copied!");
+        showAlert("Link copied!", { type: "success", title: "Success" });
     };
 
     const handleSave = () => {

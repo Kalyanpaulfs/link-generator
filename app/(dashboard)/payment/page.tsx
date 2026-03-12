@@ -11,12 +11,14 @@ import { submitPayment } from "@/app/actions/payment";
 import { getDb, getClientAuth } from "@/lib/firebase";
 import { useSettings } from "@/hooks/useSettings";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { useAlerts } from "@/context/AlertContext";
 
 export default function PaymentPage() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const planId = searchParams.get('planId');
     const plan = planId ? getPlan(planId) : null;
+    const { showAlert } = useAlerts();
 
     const [currentUser, setCurrentUser] = useState<any>(null);
     const [utr, setUtr] = useState("");
@@ -37,9 +39,25 @@ export default function PaymentPage() {
             );
 
             const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-                console.log("Active/Pending subscription found, redirecting to dashboard");
-                router.push('/dashboard');
+            const now = Date.now();
+
+            // Only redirect if they have a PENDING subscription 
+            // OR an ACTIVE one that hasn't expired yet.
+            const hasValidSub = snapshot.docs.some(doc => {
+                const data = doc.data();
+                const isPending = data.status === 'pending';
+                const isActiveNotExpired = data.status === 'active' && data.endDate > now;
+                
+                console.log(`Checking sub doc ${doc.id}: status=${data.status}, endDate=${data.endDate}, now=${now}, isPending=${isPending}, isActiveNotExpired=${isActiveNotExpired}`);
+                
+                if (isPending) return true;
+                if (isActiveNotExpired) return true;
+                return false;
+            });
+
+            if (hasValidSub) {
+                console.log("Valid or pending subscription found, but allowing access for renewal/upgrade");
+                // router.push('/dashboard'); // Removed redirect
             }
         };
 
@@ -79,11 +97,11 @@ export default function PaymentPage() {
                 // Redirect to dashboard with success param
                 router.push('/dashboard?payment_success=true');
             } else {
-                alert("Payment submission failed: " + result.error);
+                showAlert("Payment submission failed: " + result.error, { type: "error" });
             }
         } catch (error) {
             console.error(error);
-            alert("An error occurred.");
+            showAlert("An error occurred.", { type: "error" });
         } finally {
             setSubmitting(false);
         }
@@ -139,9 +157,13 @@ export default function PaymentPage() {
                                 <div className="h-48 flex items-center justify-center">Loading Payment Details...</div>
                             ) : (
                                 <>
-                                    <div className="bg-white border rounded-lg p-2 mb-4 shadow-sm">
+                                    <div className="bg-white border rounded-2xl p-0 mb-6 shadow-md overflow-hidden flex items-center justify-center">
                                         {settings.qrCodeUrl ? (
-                                            <img src={settings.qrCodeUrl} alt="QR Code" className="w-48 h-48 object-contain" />
+                                            <img 
+                                                src={settings.qrCodeUrl} 
+                                                alt="QR Code" 
+                                                className="w-full max-w-[400px] aspect-square object-contain" 
+                                            />
                                         ) : (
                                             <div className="w-48 h-48 bg-gray-100 flex items-center justify-center text-gray-400 text-xs text-center">
                                                 QR Code Not Configured

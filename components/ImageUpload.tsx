@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Upload, X, CheckCircle } from "lucide-react";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { useAlerts } from "@/context/AlertContext";
 
 interface ImageUploadProps {
     onUploadComplete: (url: string) => void;
@@ -15,6 +16,7 @@ export function ImageUpload({ onUploadComplete, label = "Upload Payment Screensh
     const [preview, setPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
+    const { showAlert } = useAlerts();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
 
@@ -33,7 +35,7 @@ export function ImageUpload({ onUploadComplete, label = "Upload Payment Screensh
                 onUploadComplete(url);
             } catch (error) {
                 console.error("Upload error", error);
-                alert("Upload failed. Please try again.");
+                showAlert("Upload failed. Please try again.", { type: "error" });
                 setFile(null);
                 setPreview(null);
             } finally {

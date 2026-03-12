@@ -25,6 +25,8 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
         ? Math.ceil((subscriptionExpiry - now) / (1000 * 60 * 60 * 24))
         : 0;
 
+    console.log(`SubscriptionStatus: expiry=${subscriptionExpiry}, now=${now}, isExpired=${isExpired}, daysRemaining=${daysRemaining}`);
+
     const getStatusConfig = () => {
         switch (subscriptionStatus) {
             case 'active':
@@ -108,7 +110,7 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
                         {subscriptionExpiry > 0 && (
                             <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400 font-medium px-3 py-1 bg-gray-50 rounded-lg">
                                 <Calendar className="w-3.5 h-3.5" />
-                                <span>Expires: {new Date(subscriptionExpiry).toLocaleDateString()}</span>
+                                <span>Expires: {new Date(subscriptionExpiry).toLocaleDateString('en-GB')}</span>
                             </div>
                         )}
                         {showUpgrade && (

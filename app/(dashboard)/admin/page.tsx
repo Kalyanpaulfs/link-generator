@@ -11,10 +11,12 @@ import { Button } from "@/components/ui/Button";
 import { RefreshCw, Shield, ShieldOff, Check, X, Trash2, Eye, UserCircle } from "lucide-react";
 import { isProtected } from "@/lib/constants";
 import { approvePayment, rejectPayment, updateUserRole, impersonateUser } from "@/app/actions/admin";
+import { useAlerts } from "@/context/AlertContext";
 
 export default function AdminPage() {
     const { isAdmin, isSuperAdmin } = useAdmin();
     const router = useRouter();
+    const { showAlert, showConfirm, showPrompt } = useAlerts();
     const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'settings'>('payments');
     const [users, setUsers] = useState<UserData[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
@@ -49,7 +51,7 @@ export default function AdminPage() {
             }
         } catch (error) {
             console.error("Error fetching data:", error);
-            alert("Failed to fetch data.");
+            showAlert("Failed to fetch data.", { type: "error" });
         } finally {
             setLoading(false);
         }
@@ -62,118 +64,121 @@ export default function AdminPage() {
     }, [isAdmin, activeTab]);
 
     const handleUpdateStatus = async (uid: string, status: 'active' | 'expired') => {
-        if (!confirm(`Set user status to ${status}?`)) return;
-        try {
-            await updateDoc(doc(getDb(), "users", uid), {
-                subscriptionStatus: status,
-                subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0
-            });
-            setUsers(users.map(u => u.uid === uid ? { ...u, subscriptionStatus: status } : u));
-        } catch (error) {
-            console.error("Update failed", error);
-            alert("Update failed");
-        }
+        showConfirm(`Set user status to ${status}?`, async () => {
+            try {
+                await updateDoc(doc(getDb(), "users", uid), {
+                    subscriptionStatus: status,
+                    subscriptionExpiry: status === 'active' ? Date.now() + (30 * 24 * 60 * 60 * 1000) : 0
+                });
+                setUsers(users.map(u => u.uid === uid ? { ...u, subscriptionStatus: status } : u));
+            } catch (error) {
+                console.error("Update failed", error);
+                showAlert("Update failed", { type: "error" });
+            }
+        });
     };
 
     const handlePromoteAdmin = async (uid: string, currentRole: Role, email: string) => {
         if (isProtected(email) && currentRole === 'admin') {
-            alert("This is a protected admin account and cannot be demoted.");
+            showAlert("This is a protected admin account and cannot be demoted.", { type: "error" });
             return;
         }
 
         const newRole = currentRole === 'admin' ? 'user' : 'admin';
         const action = newRole === 'admin' ? 'Promote to Admin' : 'Remove Admin Access';
 
-        if (!confirm(`Are you sure you want to ${action} for this user?`)) return;
-
-        try {
-            const result = await updateUserRole(uid, newRole);
-            if (result.success) {
-                setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
-            } else {
-                alert(result.error);
+        showConfirm(`Are you sure you want to ${action} for this user?`, async () => {
+            try {
+                const result = await updateUserRole(uid, newRole);
+                if (result.success) {
+                    setUsers(users.map(u => u.uid === uid ? { ...u, role: newRole } : u));
+                } else {
+                    showAlert(result.error || "Failed to update role", { type: "error" });
+                }
+            } catch (error) {
+                console.error("Role update failed", error);
+                showAlert("Failed to update role", { type: "error" });
             }
-        } catch (error) {
-            console.error("Role update failed", error);
-            alert("Failed to update role");
-        }
+        });
     };
 
     const handleDeleteUser = async (uid: string, email: string) => {
         if (isProtected(email)) {
-            alert("This is a protected admin account and cannot be deleted.");
+            showAlert("This is a protected admin account and cannot be deleted.", { type: "error" });
             return;
         }
-        if (!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
-        try {
-            const { deleteUser } = await import("@/app/actions/admin");
-            const result = await deleteUser(uid);
+        showConfirm("Are you sure you want to delete this user? This cannot be undone.", async () => {
+            try {
+                const { deleteUser } = await import("@/app/actions/admin");
+                const result = await deleteUser(uid);
 
-            if (result.success) {
-                setUsers(users.filter(u => u.uid !== uid));
-                alert("User deleted successfully.");
-            } else {
-                alert("Failed to delete: " + result.error);
+                if (result.success) {
+                    setUsers(users.filter(u => u.uid !== uid));
+                    showAlert("User deleted successfully.", { type: "success" });
+                } else {
+                    showAlert("Failed to delete: " + result.error, { type: "error" });
+                }
+            } catch (error) {
+                console.error("Delete failed", error);
+                showAlert("Delete failed", { type: "error" });
             }
-        } catch (error) {
-            console.error("Delete failed", error);
-            alert("Delete failed");
-        }
+        }, { type: "error", title: "Confirm Delete" });
     };
 
     const handleApprovePayment = async (paymentId: string) => {
-        if (!confirm("Approve this payment and activate subscription?")) return;
-        const result = await approvePayment(paymentId);
-        if (result.success) {
-            alert("Payment approved!");
-            fetchData();
-        } else {
-            alert("Error: " + result.error);
-        }
+        showConfirm("Approve this payment and activate subscription?", async () => {
+            const result = await approvePayment(paymentId);
+            if (result.success) {
+                showAlert("Payment approved!", { type: "success" });
+                fetchData();
+            } else {
+                showAlert("Error: " + result.error, { type: "error" });
+            }
+        });
     };
 
     const handleRejectPayment = async (paymentId: string) => {
-        const reason = prompt("Reason for rejection:");
-        if (!reason) return;
-        const result = await rejectPayment(paymentId, reason);
-        if (result.success) {
-            alert("Payment rejected.");
-            fetchData();
-        } else {
-            alert("Error: " + result.error);
-        }
+        showPrompt("Reason for rejection:", async (reason) => {
+            const result = await rejectPayment(paymentId, reason);
+            if (result.success) {
+                showAlert("Payment rejected.", { type: "success" });
+                fetchData();
+            } else {
+                showAlert("Error: " + result.error, { type: "error" });
+            }
+        }, { title: "Reject Payment", placeholder: "e.g. Invalid UTR" });
     };
 
     const handleSaveSettings = async () => {
         try {
             await setDoc(doc(getDb(), "settings", "global"), settings, { merge: true });
-            alert("Settings saved!");
+            showAlert("Settings saved!", { type: "success" });
         } catch (error) {
             console.error(error);
-            alert("Failed to save settings");
+            showAlert("Failed to save settings", { type: "error" });
         }
     };
 
     const handleImpersonate = async (uid: string) => {
-        if (!confirm("Are you sure you want to log in as this user? You will be signed out from your admin account.")) return;
+        showConfirm("Are you sure you want to log in as this user? You will be signed out from your admin account.", async () => {
+            try {
+                const requesterUid = getClientAuth().currentUser?.uid;
+                if (!requesterUid) throw new Error("No authenticated requester found");
 
-        try {
-            const requesterUid = getClientAuth().currentUser?.uid;
-            if (!requesterUid) throw new Error("No authenticated requester found");
-
-            const result = await impersonateUser(uid, requesterUid);
-            if (result.success && result.token) {
-                await signInWithCustomToken(getClientAuth(), result.token);
-                // Redirect to dashboard as the new user
-                router.push("/dashboard");
-                router.refresh(); // Ensure layout/state updates
-            } else {
-                alert("Impersonation failed: " + result.error);
+                const result = await impersonateUser(uid, requesterUid);
+                if (result.success && result.token) {
+                    await signInWithCustomToken(getClientAuth(), result.token);
+                    // Redirect to dashboard as the new user
+                    router.push("/dashboard");
+                    router.refresh(); // Ensure layout/state updates
+                } else {
+                    showAlert("Impersonation failed: " + result.error, { type: "error" });
+                }
+            } catch (error) {
+                console.error("Auth switch failed", error);
+                showAlert("Failed to switch user account.", { type: "error" });
             }
-        } catch (error) {
-            console.error("Auth switch failed", error);
-            alert("Failed to switch user account.");
-        }
+        });
     };
 
     if (isAdmin === null) return <div className="p-10 text-center">Checking Permissions...</div>;
@@ -315,7 +320,7 @@ export default function AdminPage() {
                                                             {user.subscriptionStatus}
                                                         </span>
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'N/A'}
+                                                            {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString('en-GB') : 'N/A'}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex justify-end gap-2">
@@ -395,7 +400,7 @@ export default function AdminPage() {
                                                         {user.subscriptionStatus}
                                                     </span>
                                                     <span className="text-gray-400">
-                                                        {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString() : 'No expiry'}
+                                                        {user.subscriptionExpiry ? new Date(user.subscriptionExpiry).toLocaleDateString('en-GB') : 'No expiry'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -475,8 +480,8 @@ export default function AdminPage() {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">QR Code Image</label>
                                         <div className="flex gap-4 items-start">
                                             {settings.qrCodeUrl && (
-                                                <div className="relative w-24 h-24 border rounded overflow-hidden">
-                                                    <img src={settings.qrCodeUrl} alt="QR Code" className="w-full h-full object-cover" />
+                                                <div className="relative w-48 h-48 border rounded-lg overflow-hidden flex items-center justify-center bg-gray-50 mb-3 md:mb-0">
+                                                    <img src={settings.qrCodeUrl} alt="QR Code" className="w-full h-full object-contain" />
                                                 </div>
                                             )}
                                             <div className="flex-1">
@@ -488,12 +493,12 @@ export default function AdminPage() {
                                                         if (!file) return;
                                                         try {
                                                             const { uploadToCloudinary } = await import("@/lib/cloudinary");
-                                                            alert("Uploading QR Code...");
+                                                            showAlert("Uploading QR Code...", { type: "info" });
                                                             const url = await uploadToCloudinary(file);
                                                             setSettings({ ...settings, qrCodeUrl: url });
-                                                            alert("Upload complete!");
+                                                            showAlert("Upload complete!", { type: "success" });
                                                         } catch (err) {
-                                                            alert("Failed to upload image");
+                                                            showAlert("Failed to upload image", { type: "error" });
                                                             console.error(err);
                                                         }
                                                     }}

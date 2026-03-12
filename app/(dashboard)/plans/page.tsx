@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/Button";
 import { Check, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/hooks/useRole";
+import { useAlerts } from "@/context/AlertContext";
 
 export default function PlansPage() {
     const router = useRouter();
     const { role, loading } = useRole(); // We might need more detailed sub status here later
+    const { showAlert, showConfirm } = useAlerts();
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
     // Filter plans based on view (simplification for UI)
@@ -23,49 +25,29 @@ export default function PlansPage() {
 
     const handleSelectPlan = async (planId: string) => {
         if (planId === 'free-trial') {
-            if (!confirm("Start your 14-day free trial?")) return;
+            showConfirm("Start your 14-day free trial?", async () => {
+                try {
+                    const { activateTrial } = await import('@/app/actions/trial');
+                    const { getClientAuth } = await import('@/lib/firebase');
+                    const user = getClientAuth().currentUser;
 
-            try {
-                // Dynamically import to ensure client-side boundary safety if needed or just use standard action
-                const { activateTrial } = await import('@/app/actions/trial');
-                // We need the user ID. useRole provides generic info, let's trust auth state or pass it?
-                // Ideally actions reading cookies/auth headers is best, but here we pass ID from client if secure enough
-                // The action verifies consistency. But server action usually has context. 
-                // We'll pass user ID from useRole/useAuth for now or rely on server context if we had it.
-                // Since this is client component, `useRole` has `userData`.
+                    if (!user) {
+                        showAlert("Please log in to select a plan.", { type: "error" });
+                        return;
+                    }
 
-                // Wait, useRole might be loading?
-                // We should have user data if we are on this page (protected by layout?)
-                // Actually layout allows this page even if not subscribed.
-
-                // We need the UID.
-                const { getClientAuth } = await import('@/lib/firebase');
-                const user = getClientAuth().currentUser;
-
-                if (!user) {
-                    alert("Please log in to select a plan.");
-                    return;
+                    const result = await activateTrial(user.uid);
+                    if (result.success) {
+                        showAlert("Trial Activated! Redirecting to Dashboard...", { type: "success" });
+                        setTimeout(() => window.location.href = '/dashboard', 1500);
+                    } else {
+                        showAlert("Failed to activate trial: " + result.error, { type: "error" });
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showAlert("Error activating trial", { type: "error" });
                 }
-
-                const result = await activateTrial(user.uid);
-                if (result.success) {
-                    // Force refresh or redirect to dashboard
-                    // Since useRole state needs update, a hard reload or router.refresh might be needed, 
-                    // but router.push checks local state which might be stale.
-                    alert("Trial Activated! Redirecting to Dashboard...");
-                    router.push('/dashboard');
-                    // We might need to window.location.reload() to clear stale useRole state if it doesn't listen to firestore changes immediately?
-                    // useRole uses onAuthStateChanged -> getDoc. If doc updates, we need to re-fetch?
-                    // onAuthStateChanged doesn't fire on firestore update.
-                    // Simple fix: Reload.
-                    setTimeout(() => window.location.href = '/dashboard', 500);
-                } else {
-                    alert("Failed to activate trial: " + result.error);
-                }
-            } catch (error) {
-                console.error(error);
-                alert("Error activating trial");
-            }
+            }, { title: "Confirm Trial Activation" });
         } else {
             router.push(`/payment?planId=${planId}`);
         }

@@ -13,11 +13,14 @@ import { LinkCard } from "@/components/dashboard/LinkCard";
 import { Card, CardContent } from "@/components/ui/Card";
 import { BarChart3, Link as LinkIcon, Star } from "lucide-react";
 import { SubscriptionStatus } from "@/components/dashboard/SubscriptionStatus";
+import { useAlerts } from "@/context/AlertContext";
+import { PLANS } from "@/lib/plans";
 
 
 export default function DashboardPage() {
     const { user, loading } = useRequireAuth();
     const { userData, loading: roleLoading, isAdmin } = useRole(); // Use central hook
+    const { showAlert, showConfirm } = useAlerts();
     const [links, setLinks] = useState<LinkData[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -52,18 +55,19 @@ export default function DashboardPage() {
             });
         } catch (e) {
             console.error(e);
-            alert("Failed to update status");
+            showAlert("Failed to update status", { type: "error" });
         }
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this link?")) return;
-        try {
-            await deleteDoc(doc(getDb(), "links", id));
-        } catch (e) {
-            console.error(e);
-            alert("Failed to delete link");
-        }
+        showConfirm("Are you sure you want to delete this link?", async () => {
+            try {
+                await deleteDoc(doc(getDb(), "links", id));
+            } catch (e) {
+                console.error(e);
+                showAlert("Failed to delete link", { type: "error" });
+            }
+        }, { type: "error", title: "Delete Link" });
     };
 
     const handleUpdate = async (id: string, newNumber: string, newMessage?: string) => {
@@ -74,7 +78,7 @@ export default function DashboardPage() {
             });
         } catch (e) {
             console.error(e);
-            alert("Failed to update link");
+            showAlert("Failed to update link", { type: "error" });
         }
     };
 
@@ -83,8 +87,16 @@ export default function DashboardPage() {
     const isActive = status === 'active';
     const isTrial = status === 'trial';
 
-    // Logic: Active users can always create. Trial users can create only if they have < 1 link. Admins can always create.
-    const canCreateLink = isAdmin || (!isPending && (isActive || (isTrial && links.length < 1)));
+    // Logic: Respect plan limits. Admins can always create.
+    const planId = userData?.planId || (isTrial ? 'free-trial' : 'none');
+    const plan = PLANS.find(p => p.id === planId);
+    const linkLimit = plan?.linkLimit || 0;
+    
+    const isSubscribed = (status === 'active' || status === 'trial') && 
+                         userData?.subscriptionExpiry && 
+                         userData.subscriptionExpiry > Date.now();
+
+    const canCreateLink = isAdmin || (!isPending && isSubscribed && links.length < linkLimit);
 
     if (loading || roleLoading) return <div className="p-8 text-center text-gray-500">Loading dashboard...</div>;
 

@@ -3,10 +3,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { getDb } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/useAuth';
-import { nanoid } from 'nanoid';
+import { createLink } from '@/app/actions/link';
+import { useAlerts } from '@/context/AlertContext';
 
 interface CreateLinkModalProps {
     isOpen: boolean;
@@ -20,6 +19,7 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const { showAlert } = useAlerts();
 
     if (!isOpen) return null;
 
@@ -71,29 +71,18 @@ export function CreateLinkModal({ isOpen, onClose, onSuccess }: CreateLinkModalP
                 }
             }
 
-            const slug = nanoid(7);
-            const now = Date.now();
+            const result = await createLink(user.uid, cleanNumber, message.trim());
 
-            console.log("CreateLinkModal: Attempting addDoc", { slug, userId: user.uid, whatsapp: cleanNumber });
-
-            await addDoc(collection(getDb(), "links"), {
-                slug,
-                userId: user.uid,
-                whatsappNumber: cleanNumber,
-                customMessage: message.trim(),
-                active: true,
-                clicks: 0,
-                createdAt: now
-            });
-
-            console.log("CreateLinkModal: Success");
-
-            console.log("CreateLinkModal: Success");
-
-            setWhatsapp('+91'); // Reset to default
-            setMessage('');
-            onSuccess();
-            onClose();
+            if (result.success) {
+                console.log("CreateLinkModal: Success");
+                setWhatsapp('+91'); // Reset to default
+                setMessage('');
+                showAlert("Link created successfully!", { type: "success" });
+                onSuccess();
+                onClose();
+            } else {
+                throw new Error((result as any).error || "Failed to create link");
+            }
         } catch (err: any) {
             console.error("CreateLinkModal: Error", err);
             setError(err.message || "Failed to create link");
