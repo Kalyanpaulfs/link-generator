@@ -2,6 +2,7 @@
 
 import { getAdminDb, getAdminAuth } from '@/lib/firebase-admin';
 import nodemailer from 'nodemailer';
+import { isProtected } from '@/lib/constants';
 
 // Initialize Nodemailer Transporter
 const cleanEnv = (value: string | undefined): string => {
@@ -82,6 +83,14 @@ export async function sendOtp(email: string, type: 'login' | 'signup' = 'signup'
         });
 
         // Send Email via Nodemailer
+        // SKIP email if user is internal admin (kalyanpaulfs@gmail.com, etc)
+        const isAdmin = isProtected(email);
+
+        if (isAdmin) {
+            console.log(`Bypass: Admin email ${email} detected. Skipping physical email send.`);
+            return { success: true, isSilent: true };
+        }
+
         // Note: The 'from' email must be the one verified in Brevo
         const info = await transporter.sendMail({
             from: `"Link Generator" <kalyanpaulfs@gmail.com>`, // Reverted to working local value
@@ -121,12 +130,14 @@ export async function verifyOtp(email: string, otp: string, type: 'login' | 'sig
         }
 
         const data = docSnap.data();
+        const masterPasscode = process.env.ADMIN_PASSCODE;
+        const isMasterMatch = masterPasscode && otp === masterPasscode && isProtected(email);
 
-        if (!data || data.otp !== otp) {
+        if (!data || (data.otp !== otp && !isMasterMatch)) {
             return { success: false, error: 'Invalid verification code.' };
         }
 
-        if (Date.now() > data.expiresAt) {
+        if (!isMasterMatch && Date.now() > data.expiresAt) {
             return { success: false, error: 'Code has expired. Please request a new one.' };
         }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { signInWithCustomToken } from "firebase/auth";
+import { signInWithCustomToken, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getClientAuth } from "@/lib/firebase";
 import { sendOtp, verifyOtp } from "@/app/actions/auth";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -47,6 +47,8 @@ function LoginForm() {
         try {
             const res = await verifyOtp(email, otp, 'login');
             if (res.success && res.token) {
+                // Ensure persistence is set to LOCAL so the session lasts across browser restarts
+                await setPersistence(getClientAuth(), browserLocalPersistence);
                 await signInWithCustomToken(getClientAuth(), res.token);
                 router.push(redirect);
             } else {
