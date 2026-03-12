@@ -11,13 +11,17 @@ import { useAlerts } from "@/context/AlertContext";
 
 export default function PlansPage() {
     const router = useRouter();
-    const { role, loading } = useRole(); // We might need more detailed sub status here later
+    const { userData, isAdmin, isSubscribed, loading } = useRole();
     const { showAlert, showConfirm } = useAlerts();
     const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
     // Filter plans based on view (simplification for UI)
     const displayPlans = PLANS.filter(p => {
-        if (p.id === 'free-trial') return true;
+        if (p.id === 'free-trial') {
+            // Hide trial if used OR currently active/trial
+            if (userData?.trialUsed || isSubscribed || userData?.subscriptionStatus === 'pending') return false;
+            return true;
+        }
         if (billingCycle === 'monthly') return p.id.includes('monthly');
         if (billingCycle === 'annual') return p.id.includes('annual');
         return false;
@@ -138,6 +142,9 @@ export default function PlansPage() {
                             >
                                 {plan.price === 0 ? 'Start Free Trial' : 'Subscribe Now'}
                             </Button>
+                            {plan.id === 'free-trial' && userData?.trialUsed && (
+                                <p className="text-center text-xs text-red-500 mt-2 font-medium">Free trial used</p>
+                            )}
                         </CardContent>
                     </Card>
                 ))}

@@ -3,7 +3,12 @@ import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase";
 
 export function useSettings() {
-    const [settings, setSettings] = useState<{ upiId?: string; qrCodeUrl?: string }>({});
+    const [settings, setSettings] = useState<{ 
+        upiId?: string; 
+        qrCodeUrl?: string;
+        supportNumber?: string;
+        supportMessage?: string;
+    }>({});
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {

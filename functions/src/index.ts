@@ -83,10 +83,11 @@ export const w = functions.https.onRequest(async (req, res) => {
 
         const user = userSnapshot.data() as UserData;
         const now = Date.now();
-        const isExpired = user.subscriptionStatus === 'expired' || (user.subscriptionExpiry && user.subscriptionExpiry < now);
+        const isAllowedStatus = user.subscriptionStatus === 'active' || user.subscriptionStatus === 'trial';
+        const hasNotExpired = user.subscriptionExpiry && user.subscriptionExpiry > now;
 
-        if (isExpired) {
-            res.status(402).send(errorPage("Subscription Expired", "This link is no longer active due to subscription expiry."));
+        if (!isAllowedStatus || !hasNotExpired) {
+            res.status(402).send(errorPage("Link Inactive", "This link is no longer active due to subscription status or expiry."));
             return;
         }
 

@@ -4,15 +4,19 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { UserData } from "@/types";
-import { Calendar, Crown, Info, Timer } from "lucide-react";
+import { Calendar, Crown, Info, Timer, X } from "lucide-react";
 import Link from "next/link";
+import { useSettings } from "@/hooks/useSettings";
 
 interface SubscriptionStatusProps {
     userData: UserData | null;
 }
 
 export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
+    const { settings } = useSettings();
     if (!userData) return null;
+
+    const supportLink = `https://wa.me/${settings.supportNumber || '917004516415'}?text=${encodeURIComponent(settings.supportMessage || "Hi Support, I need help with my account.")}`;
 
     const { subscriptionStatus, subscriptionExpiry, role } = userData;
     const isAdmin = role === 'admin' || role === 'super_admin';
@@ -20,7 +24,7 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
     if (isAdmin) return null;
 
     const now = Date.now();
-    const isExpired = subscriptionExpiry && subscriptionExpiry < now;
+    const isExpired = !!(subscriptionExpiry && subscriptionExpiry < now);
     const daysRemaining = subscriptionExpiry
         ? Math.ceil((subscriptionExpiry - now) / (1000 * 60 * 60 * 24))
         : 0;
@@ -56,8 +60,22 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
                     textColor: 'text-yellow-900',
                     description: (
                         <span>
-                            Admin is reviewing your payment. <a href="https://wa.me/917004516415" target="_blank" className="font-bold underline text-yellow-700">Need help?</a>
+                            Admin is reviewing your payment. <a href={supportLink} target="_blank" className="font-bold underline text-yellow-700">Need help?</a>
                         </span>
+                    ),
+                };
+            case 'rejected':
+                return {
+                    label: 'Payment Rejected',
+                    icon: <X className="w-5 h-5 text-red-600" />,
+                    bgColor: 'bg-red-50',
+                    borderColor: 'border-red-100',
+                    textColor: 'text-red-900',
+                    description: (
+                        <div className="space-y-1">
+                            <p className="font-bold">Reason: {userData.lastRejectionReason || 'Invalid proof'}</p>
+                            <p>Please try again with correct details.</p>
+                        </div>
                     ),
                 };
             case 'expired':
@@ -71,7 +89,7 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
                     textColor: 'text-red-900',
                     description: (
                         <span>
-                            Upgrade to create and keep links active. <a href="https://wa.me/917004516415" target="_blank" className="font-bold underline text-red-700">Support</a>
+                            Upgrade to create and keep links active. <a href={supportLink} target="_blank" className="font-bold underline text-red-700">Support</a>
                         </span>
                     ),
                 };
@@ -100,9 +118,9 @@ export function SubscriptionStatus({ userData }: SubscriptionStatusProps) {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-gray-600 text-sm font-medium mt-0.5">
+                            <div className="text-gray-600 text-sm font-medium mt-0.5">
                                 {config.description}
-                            </p>
+                            </div>
                         </div>
                     </div>
 

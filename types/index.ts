@@ -22,6 +22,8 @@ export interface UserData {
     subscriptionStatus: SubscriptionStatus;
     subscriptionExpiry: number; // Timestamp
     planId?: string;
+    lastRejectionReason?: string;
+    trialUsed?: boolean;
     createdAt?: number;
 }
 

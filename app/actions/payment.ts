@@ -15,6 +15,14 @@ export async function submitPayment(userId: string, planId: string, utrNumber: s
     }
 
     try {
+        const userRef = getAdminDb().collection('users').doc(userId);
+        const userSnap = await userRef.get();
+        const userData = userSnap.data();
+
+        if (userData?.subscriptionStatus === 'pending') {
+            return { success: false, error: "You already have a payment pending approval. Please wait for the admin to review it." };
+        }
+
         // Create Subscription Record (Pending)
         const subRef = getAdminDb().collection('subscriptions').doc();
         const paymentRef = getAdminDb().collection('payments').doc();

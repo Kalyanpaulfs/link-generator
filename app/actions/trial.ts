@@ -12,14 +12,23 @@ export async function activateTrial(userId: string) {
             if (!userDoc.exists) throw new Error("User not found");
             const userData = userDoc.data();
 
-            if (userData?.subscriptionStatus && userData.subscriptionStatus !== 'none') {
-                throw new Error("Free trial already used or an active subscription exists.");
+            if (userData?.trialUsed) {
+                throw new Error("Free trial has already been used on this account.");
+            }
+
+            if (userData?.subscriptionStatus === 'active') {
+                throw new Error("You already have an active subscription.");
+            }
+
+            if (userData?.subscriptionStatus === 'pending') {
+                throw new Error("You have a payment pending approval.");
             }
 
             // Allow trial activation
             t.update(userRef, {
                 subscriptionStatus: 'trial',
                 subscriptionExpiry: Date.now() + (14 * 24 * 60 * 60 * 1000), // 14 days
+                trialUsed: true
             });
         });
 

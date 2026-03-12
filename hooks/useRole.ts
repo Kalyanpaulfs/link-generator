@@ -45,7 +45,10 @@ export function useRole() {
         loading,
         isAdmin: userData?.role === 'admin' || userData?.role === 'super_admin',
         isSuperAdmin: userData?.role === 'super_admin',
-        isSubscribed: userData?.role === 'admin' || userData?.role === 'super_admin' || userData?.subscriptionStatus === 'active' || userData?.subscriptionStatus === 'trial',
+        isSubscribed: userData?.role === 'admin' || 
+                      userData?.role === 'super_admin' || 
+                      ((userData?.subscriptionStatus === 'active' || userData?.subscriptionStatus === 'trial') && 
+                       (userData?.subscriptionExpiry || 0) > Date.now()),
         subscriptionStatus: userData?.subscriptionStatus
     };
 }

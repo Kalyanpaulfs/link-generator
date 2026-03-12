@@ -32,10 +32,19 @@ export async function approvePayment(paymentId: string) {
 
             if (!plan) throw new Error("Invalid plan in subscription");
 
+            const userRef = getAdminDb().collection('users').doc(userId);
+            const userDoc = await t.get(userRef);
+
             // Calculate dates
-            const startDate = Timestamp.now();
-            const endDateMs = startDate.toMillis() + (plan.durationInDays * 24 * 60 * 60 * 1000);
-            // const endDate = Timestamp.fromMillis(endDateMs);
+            const userData = userDoc.data();
+            const currentExpiry = userData?.subscriptionExpiry || 0;
+            const now = Date.now();
+            
+            // If user has a valid unexpired plan, add to it. Otherwise start from now.
+            const baseDate = currentExpiry > now ? currentExpiry : now;
+            const durationMs = plan.durationInDays * 24 * 60 * 60 * 1000;
+            const endDateMs = baseDate + durationMs;
+            const startDate = Timestamp.fromMillis(now);
 
             // Update Payment
             t.update(paymentRef, {
@@ -52,7 +61,6 @@ export async function approvePayment(paymentId: string) {
             });
 
             // Update User
-            const userRef = getAdminDb().collection('users').doc(userId);
             t.update(userRef, {
                 subscriptionStatus: 'active',
                 subscriptionExpiry: endDateMs,
@@ -75,7 +83,7 @@ export async function rejectPayment(paymentId: string, reason: string) {
             if (!paymentDoc.exists) {
                 throw new Error("Payment not found");
             }
-            const { subscriptionId } = paymentDoc.data() as any;
+            const { userId, subscriptionId } = paymentDoc.data() as any;
 
             // Update Payment
             t.update(paymentRef, {
@@ -89,6 +97,13 @@ export async function rejectPayment(paymentId: string, reason: string) {
             t.update(subRef, {
                 status: 'rejected',
                 updatedAt: Timestamp.now().toMillis()
+            });
+
+            // Update User to unblock them and show reason
+            const userRef = getAdminDb().collection('users').doc(userId);
+            t.update(userRef, {
+                subscriptionStatus: 'rejected',
+                lastRejectionReason: reason
             });
         });
 
@@ -147,8 +162,17 @@ export async function deleteUser(userId: string) {
         await getAdminAuth().deleteUser(userId);
 
         // Delete from Firestore
-        await userRef.delete();
+        // Batch delete associated links
+        const linksRef = getAdminDb().collection('links').where('userId', '==', userId);
+        const linksSnap = await linksRef.get();
+        if (!linksSnap.empty) {
+            const batch = getAdminDb().batch();
+            linksSnap.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            console.log(`Deleted ${linksSnap.size} links for user ${userId}`);
+        }
 
+        await userRef.delete();
         return { success: true };
     } catch (error: any) {
         console.error("Delete failed:", error);

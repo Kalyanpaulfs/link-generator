@@ -20,7 +20,7 @@ export default function AdminPage() {
     const [activeTab, setActiveTab] = useState<'users' | 'payments' | 'settings'>('payments');
     const [users, setUsers] = useState<UserData[]>([]);
     const [payments, setPayments] = useState<any[]>([]);
-    const [settings, setSettings] = useState({ upiId: '', qrCodeUrl: '' });
+    const [settings, setSettings] = useState({ upiId: '', qrCodeUrl: '', supportNumber: '', supportMessage: '' });
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
@@ -474,6 +474,27 @@ export default function AdminPage() {
                                             onChange={(e) => setSettings({ ...settings, upiId: e.target.value })}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                             placeholder="e.g. merchant@upi"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Support WhatsApp Number</label>
+                                        <input
+                                            type="text"
+                                            value={settings.supportNumber}
+                                            onChange={(e) => setSettings({ ...settings, supportNumber: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="e.g. 917004516415"
+                                        />
+                                        <p className="text-[10px] text-gray-500 mt-1">Include country code without '+'.</p>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Support Welcome Message</label>
+                                        <textarea
+                                            value={settings.supportMessage}
+                                            onChange={(e) => setSettings({ ...settings, supportMessage: e.target.value })}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="e.g. Hi LinkGen Support, I need help with my account."
+                                            rows={2}
                                         />
                                     </div>
                                     <div>
